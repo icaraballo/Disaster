@@ -1,5 +1,7 @@
 # Disaster
 
+### ▶ [Jugar](https://icaraballo.github.io/Disaster/)
+
 > Nombre de trabajo. El nombre final está por decidir.
 
 Juego de gestión y supervivencia por turnos: eres el alcalde de un pueblo pequeño y tienes que

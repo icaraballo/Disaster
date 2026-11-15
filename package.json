@@ -1,0 +1,9 @@
+﻿{
+  "name": "disaster",
+  "private": true,
+  "license": "UNLICENSED",
+  "description": "Atajos. El juego no tiene dependencias: npm install no hace falta.",
+  "scripts": {
+    "serve": "python3 -m http.server 8765"
+  }
+}

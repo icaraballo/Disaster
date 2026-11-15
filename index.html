@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Villarrío — prototipo jugable</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#F4EFE4;color:#23262B;font-family:Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  #app{max-width:460px;margin:0 auto;padding:14px 14px 32px;display:flex;flex-direction:column;gap:12px;min-height:100vh}
+  h1,h2,h3{font-family:Rubik,sans-serif;margin:0}
+  button{font-family:inherit;color:inherit}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .muted{color:#5E5A52}
+  .label{font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#5E5A52}
+  .card{background:#fff;border-radius:16px;padding:14px}
+  .btn{min-height:52px;border:none;border-radius:14px;background:#23262B;color:#fff;font-family:Rubik,sans-serif;font-weight:600;font-size:16px;cursor:pointer;width:100%;padding:8px 14px}
+  .btn:disabled{background:#B9B2A3;cursor:default}
+  .btn.ghost{background:#fff;color:#23262B;border:2px solid #E0D8C6}
+  .btn small{display:block;font-family:Inter,sans-serif;font-weight:500;font-size:12px;opacity:.8;margin-top:2px}
+  .season{display:flex;gap:4px}
+  .season div{flex:1;height:6px;border-radius:3px;background:#D6CEBD}
+  .season .done{background:#4E7A4F}.season .now{background:#C2531F}
+  .res{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+  .res>div{background:#fff;border-radius:10px;padding:6px 8px;min-width:0}
+  .res .k{font-size:10.5px;color:#5E5A52;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .res .v{font-weight:700;font-size:14px;white-space:nowrap}
+  .d{font-size:11px;font-weight:700;margin-left:3px}
+  .pos{color:#2F6B37}.neg{color:#A8441A}
+  .mapwrap{background:#E6DFCF;border-radius:14px;padding:7px;position:relative}
+  .map{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px}
+  .tile{position:relative;aspect-ratio:1;border-radius:6px;border:none;padding:0;display:flex;align-items:center;justify-content:center;cursor:default}
+  .tile.click{cursor:pointer}
+  .tile svg.ic{width:70%;height:70%}
+  .tile.broken svg.ic{opacity:.5;filter:grayscale(.7)}
+  .tile.pick{cursor:pointer;outline:3px dashed #23262B;outline-offset:-2px}
+  .tile.nopick{opacity:.4}
+  .tile.insp{box-shadow:0 0 0 3px #F4EFE4,0 0 0 6px #23262B;z-index:2}
+  .tile.heatdim{opacity:.45}
+  .ov{position:absolute;inset:0;border-radius:6px;pointer-events:none}
+  .ov.flood{background:rgba(31,79,133,.58)}
+  .ov.fire{background:rgba(214,92,30,.62)}
+  .ov.slide{background:rgba(110,76,40,.62)}
+  .ov.snow{background:rgba(255,255,255,.72)}
+  .ov.bolt{background:rgba(240,196,60,.55)}
+  .ov.heat{display:flex;align-items:center;justify-content:center}
+  .ov.heat span{background:#23262B;color:#fff;font-size:10px;font-weight:700;border-radius:6px;padding:1px 4px}
+  .badge{position:absolute;width:17px;height:17px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;pointer-events:none}
+  .b-dmg{top:-4px;right:-4px;background:#C2531F}
+  .b-ok{top:-4px;right:-4px;background:#3E7B45}
+  .b-work{bottom:-4px;left:-4px;background:#23262B}
+  .b-evac{top:-4px;left:-4px;background:#2F6B37}
+  .b-rayo{top:2px;left:2px;width:13px;height:13px;background:#E8B730}
+  .dique{position:absolute;left:4px;right:4px;bottom:4px;height:7px;border-radius:3px;background:#6B5B45;pointer-events:none}
+  .dique.cheap{background:repeating-linear-gradient(90deg,#6B5B45 0 4px,#C9B48F 4px 7px)}
+  .muro{position:absolute;left:3px;right:3px;top:45%;height:6px;border-radius:2px;background:#8E8A84;pointer-events:none}
+  .sacos{position:absolute;right:3px;bottom:3px;width:12px;height:9px;border-radius:3px;background:#B99662;border:1.5px solid #6B5B45;pointer-events:none}
+  .dim .map{opacity:.6}
+  .bar{height:10px;border-radius:5px;background:#ECE6D8;overflow:hidden}
+  .bar div{height:10px;border-radius:5px}
+  .jobs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+  .job{background:#fff;border-radius:12px;padding:8px 5px;display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;border:2px solid #E0D8C6}
+  .job.on{border-color:#23262B}.job.on.danger{border-color:#C2531F}
+  .job .n{font-family:Rubik,sans-serif;font-weight:600;font-size:13px}
+  .job .y{font-size:10.5px;color:#5E5A52;line-height:1.25;min-height:26px}
+  .job .who{font-size:10.5px;line-height:1.25;min-height:13px;font-weight:600}
+  .step{display:flex;align-items:center;gap:5px}
+  .step button{width:30px;height:30px;border-radius:15px;border:none;font-size:17px;font-weight:700;cursor:pointer;padding:0}
+  .step .m{background:#ECE6D8}.step .p{background:#23262B;color:#fff}
+  .step button:disabled{opacity:.35;cursor:default}
+  .acts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+  .act{background:#fff;border:2px solid #E0D8C6;border-radius:12px;padding:7px 8px;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:2px;min-height:52px}
+  .act .n{font-family:Rubik,sans-serif;font-weight:600;font-size:13px}
+  .act .c{font-size:10.5px;color:#5E5A52;line-height:1.25}
+  .act.sel{background:#23262B;border-color:#23262B;color:#fff}
+  .act.sel .c{color:#D8D3C8}
+  .hint{font-size:13px;line-height:1.4;background:#fff;border-radius:12px;padding:10px 12px}
+  .msg{font-size:13px;font-weight:600;min-height:18px;line-height:1.4}
+  .log{display:flex;flex-direction:column;gap:9px}
+  .log .e{display:flex;gap:10px;align-items:flex-start;font-size:14px;line-height:1.4;animation:in .35s ease}
+  .log .dot{width:10px;height:10px;border-radius:5px;margin-top:5px;flex-shrink:0}
+  @keyframes in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  .k-title{font-weight:700}.k-title .dot{background:#23262B}
+  .k-good .dot{background:#3E7B45}.k-warn .dot{background:#D99A2B}.k-bad .dot{background:#C2531F}.k-cascade .dot{background:#7A5A9E}.k-info .dot{background:#9A9384}
+  .banner{border-radius:16px;padding:14px 16px;color:#fff}
+  .pick-card{width:100%;text-align:left;background:#fff;border:2px solid #E0D8C6;border-radius:14px;padding:12px 14px;cursor:pointer;display:flex;gap:12px;align-items:center}
+  .pick-card:hover{border-color:#23262B}
+  .pick-card.sel{border-color:#23262B;box-shadow:inset 0 0 0 1px #23262B}
+  .pick-card.locked{cursor:default;opacity:.6}
+  .pick-card.locked:hover{border-color:#E0D8C6}
+  .pick-card .sw{width:40px;height:40px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;font-family:Rubik,sans-serif;font-weight:700}
+  .pick-card .n{font-family:Rubik,sans-serif;font-weight:600;font-size:15px}
+  .pick-card .dd{font-size:12.5px;color:#5E5A52;line-height:1.35;margin-top:2px}
+  .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .stat{background:#fff;border-radius:12px;padding:9px 12px}
+  .stat .k{font-size:11px;color:#5E5A52}.stat .v{font-family:Rubik,sans-serif;font-weight:600;font-size:19px}
+  ul.rules{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:8px;font-size:14px;line-height:1.45}
+  .chip{font-size:12px;font-weight:600;color:#fff;border-radius:999px;padding:4px 10px;white-space:nowrap}
+  .warnline{font-size:13px;line-height:1.4;background:#FBEBD0;color:#5C3D07;border-radius:12px;padding:9px 12px}
+  .goodline{font-size:13px;line-height:1.4;background:#DDEBD9;color:#1F4A25;border-radius:12px;padding:9px 12px}
+  .info{background:#fff;border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:9px;animation:in .25s ease}
+  .info .sw{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center}
+  .info .sw svg{width:80%;height:80%}
+  .x{width:32px;height:32px;border-radius:16px;border:none;background:#ECE6D8;cursor:pointer;font-size:13px;flex-shrink:0}
+  .tag{font-size:11.5px;font-weight:600;background:#ECE6D8;border-radius:999px;padding:3px 9px}
+  .tag.bad{background:#C2531F;color:#fff}
+  .doat{border:2px solid #23262B;background:#23262B;color:#fff;border-radius:10px;padding:7px 10px;font-size:13px;font-weight:600;cursor:pointer}
+  .doat span{font-weight:400;font-size:11px;opacity:.85}
+  .people{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}
+  .person{flex:0 0 auto;display:flex;gap:7px;align-items:center;background:#fff;border:2px solid #E0D8C6;border-radius:999px;padding:4px 10px 4px 4px;cursor:pointer;text-align:left}
+  .person.out{opacity:.55}
+  .person .av{width:26px;height:26px;border-radius:13px;color:#fff;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .person .nm{font-size:12px;font-weight:600;line-height:1.1}
+  .person .st{font-size:10.5px;color:#5E5A52;line-height:1.1}
+  .toggle{display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer}
+  .toggle input{width:18px;height:18px}
+  .menubtn{border:2px solid #E0D8C6;background:#fff;border-radius:999px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;min-height:32px}
+  .menubtn:hover{border-color:#23262B}
+  .heatbtn{border:2px solid #23262B;background:#fff;border-radius:999px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer}
+  .heatbtn.on{background:#23262B;color:#fff}
+  .ev-opt{width:100%;text-align:left;background:#fff;border:2px solid #E0D8C6;border-radius:14px;padding:12px 14px;cursor:pointer}
+  .ev-opt:hover{border-color:#23262B}
+  .ev-opt .n{font-family:Rubik,sans-serif;font-weight:600;font-size:15px}
+  .ev-opt .dd{font-size:13px;color:#5E5A52;line-height:1.35;margin-top:2px}
+  .chart svg{width:100%;height:auto;display:block}
+  .board{display:flex;flex-direction:column;gap:6px}
+  .board .r{display:flex;gap:10px;align-items:center;font-size:14px}
+  .board .pos-n{width:22px;font-weight:700;color:#5E5A52}
+  .board .me{font-weight:700}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+(function(){
+/* =========================================================
+   DATOS DEL JUEGO
+   ========================================================= */
+const SEASON = 8;
+const BUILD = new Set(['C','A','G','O','W']);
+const BG = {B:'#4E7A4F',X:'#B7C48F',Q:'#5B544C',L:'#C4A97F',P:'#A9C285',R:'#5E9BD1',C:'#D9C9A3',A:'#D9C9A3',G:'#C9B57E',O:'#D9C9A3',W:'#D9C9A3',M:'#3C7DB8',S:'#E3E9EE'};
+const ICON = {
+  B:'<circle cx="10" cy="12" r="6" fill="#2F5A33"/><circle cx="18" cy="15" r="6" fill="#36673A"/><rect x="13" y="19" width="2" height="5" fill="#5A4027"/>',
+  X:'<rect x="6" y="15" width="5" height="6" rx="1" fill="#7A5A3A"/><rect x="16" y="13" width="5" height="8" rx="1" fill="#7A5A3A"/><ellipse cx="8.5" cy="15" rx="2.5" ry="1" fill="#C9A77A"/><ellipse cx="18.5" cy="13" rx="2.5" ry="1" fill="#C9A77A"/>',
+  Q:'<path d="M6 21 L9 9 M13 22 L14 7 M20 21 L21 10" stroke="#2B2724" stroke-width="2.5" stroke-linecap="round"/>',
+  L:'<path d="M4 22 L24 6 M4 14 L16 4 M12 24 L24 14" stroke="#8C7350" stroke-width="2"/>',
+  P:'<path d="M7 19 l2-4 l2 4 M16 12 l2-4 l2 4" stroke="#7FA05E" stroke-width="1.6" fill="none"/>',
+  R:'<path d="M3 11 Q8 7 14 11 T25 11 M3 18 Q8 14 14 18 T25 18" fill="none" stroke="#DDEBF7" stroke-width="2"/>',
+  M:'<path d="M2 9 Q6 5 10 9 T18 9 T26 9 M2 16 Q6 12 10 16 T18 16 T26 16 M2 23 Q6 19 10 23 T18 23 T26 23" fill="none" stroke="#CFE2F3" stroke-width="2"/>',
+  S:'<path d="M3 23 L11 8 L15 14 L18 10 L25 23 Z" fill="#9AA8B5"/><path d="M8.5 13 L11 8 L13.5 12 L12 13 L10.5 12 Z M16.5 12.5 L18 10 L20 14 Z" fill="#FFFFFF"/>',
+  C:'<path d="M5 13 L14 5 L23 13 Z" fill="#B5502E"/><rect x="8" y="13" width="12" height="9" fill="#F7EEDC" stroke="#6B5B45"/><rect x="12" y="16" width="4" height="6" fill="#6B5B45"/>',
+  A:'<rect x="4" y="11" width="20" height="12" fill="#F7EEDC" stroke="#6B5B45"/><path d="M3 11 L14 4 L25 11 Z" fill="#7A5A9E"/><rect x="8" y="15" width="3" height="8" fill="#6B5B45"/><rect x="17" y="15" width="3" height="8" fill="#6B5B45"/>',
+  G:'<path d="M4 12 L14 5 L24 12 L24 23 L4 23 Z" fill="#A9452B"/><path d="M11 23 L11 16 L17 16 L17 23" fill="#F7EEDC"/>',
+  O:'<rect x="6" y="15" width="16" height="8" fill="#F7EEDC" stroke="#6B5B45"/><path d="M6 15 A8 8 0 0 1 22 15 Z" fill="#7C8FA6"/><path d="M16 9 L23 5" stroke="#3B4A5C" stroke-width="2"/>',
+  W:'<rect x="7" y="9" width="14" height="14" rx="2" fill="#7C9DB8" stroke="#3B5468"/><path d="M7 15 H21" stroke="#CFE2F3" stroke-width="2"/><rect x="11" y="5" width="6" height="4" fill="#3B5468"/>'
+};
+const TOWNS = {
+  villarrio:{name:'Villarrío', kind:'Valle con río', color:'#4E7A4F',
+    desc:'Un pueblo tranquilo junto al río. Riadas, incendios, tormentas y alguna sequía.',
+    map:["BBBLLPP","BBLLPPP","BLPCCPR","PPCACRR","PCCCRRP","PPCRRPG","PPRRPPG","PRRPPPP"],
+    river:[20,27,26,33,32,39,38,45,44,51,50], riadaMult:1,
+    pool:{riada:3,incendio:3,tormenta:3,sequia:2,ola:2,plaga:2}, unlock:null},
+  arrieta:{name:'Arrieta', kind:'Costa', color:'#2A62A0',
+    desc:'Pueblo pesquero. Los temporales del mar golpean las casas del puerto.',
+    map:["LLBBRBB","LBBPRPP","BCCCRCP","PCACRCG","PCCPRPG","PPCPRCP","MCCPRCM","MMMMMMM"],
+    river:[4,11,18,25,32,39,46], riadaMult:0.8,
+    pool:{temporal:4,tormenta:3,riada:2,incendio:2,ola:2,plaga:1},
+    unlock:{text:'Gana una temporada en Villarrío', test:p=>(p.wins.villarrio||0)>=1}},
+  altuzarra:{name:'Altuzarra', kind:'Alta montaña', color:'#5E6E7E',
+    desc:'Entre neveros y laderas. Los aludes bajan por las columnas hasta que algo los para.',
+    map:["SSSLSSL","LSLLLSL","BLBBRBB","PCCARCP","PCCPRCG","BPPRPPG","BPRPPPP","PRPPPPB"],
+    river:[18,25,32,38,44,50], riadaMult:0.9,
+    pool:{alud:4,tormenta:3,incendio:2,riada:2,sequia:1,plaga:1},
+    unlock:{text:'Llega al desastre 6 en Arrieta', test:p=>(p.maxIdx.arrieta||0)>=5}},
+  errekalde:{name:'Errekalde', kind:'Ría', color:'#1F4F85',
+    desc:'Casas a los dos lados de una ría ancha que desemboca en el mar. Riadas muy duras.',
+    map:["BBPRRPL","BPCRRCL","PCCRRCC","PCARRCP","GPCRRCP","GPPRRPB","PPCRRCB","PPPRRMM"],
+    river:[3,4,10,11,17,18,24,25,31,32,38,39,45,46,52,53], riadaMult:0.85,
+    pool:{riada:5,temporal:2,tormenta:3,ola:2,plaga:1,incendio:1},
+    unlock:{text:'Gana una temporada en Altuzarra', test:p=>(p.wins.altuzarra||0)>=1}}
+};
+const DIS = {
+  riada:{name:'Riada', fore:'Lluvias intensas', color:'#1F4F85'},
+  incendio:{name:'Incendio forestal', fore:'Calor y viento seco', color:'#A8441A'},
+  tormenta:{name:'Tormenta eléctrica', fore:'Tormenta eléctrica', color:'#5E4A0E'},
+  sequia:{name:'Sequía', fore:'Semanas sin llover', color:'#7A5C14'},
+  ola:{name:'Ola de calor', fore:'Temperaturas extremas', color:'#9C3A16'},
+  plaga:{name:'Plaga', fore:'Plaga en los cultivos', color:'#4F6B2A'},
+  temporal:{name:'Temporal marítimo', fore:'Temporal en el mar', color:'#1E5670'},
+  alud:{name:'Alud', fore:'Nevadas fuertes', color:'#475A6C'}
+};
+const PAIRS = [['tormenta','riada'],['sequia','incendio'],['ola','incendio'],['temporal','riada'],['alud','tormenta'],['plaga','sequia'],['temporal','tormenta']];
+const SLIDE_MULT = {riada:1, tormenta:.5, temporal:.5, alud:.6, incendio:.3, sequia:0, ola:0, plaga:0};
+const ALCALDES = [
+  {id:'ingeniera', name:'Begoña', title:'La ingeniera', color:'#5E6E7E', d:'Diques, escolleras y muros cuestan 1 piedra menos. Empieza con +3 piedra.', unlock:null},
+  {id:'agricultor', name:'Patxi', title:'El agricultor', color:'#C9A23A', d:'Cada persona en la granja da +2 comida. Empieza con +8 comida. Las plagas hacen la mitad de daño.', unlock:null},
+  {id:'meteorologa', name:'Garazi', title:'La meteoróloga', color:'#7A5A9E', d:'Previsión un nivel más precisa, y ves qué viene en el desastre siguiente.', unlock:{text:'Supera 10 desastres en total', test:p=>p.total>=10}},
+  {id:'tesorero', name:'Txomin', title:'El tesorero', color:'#D99A2B', d:'Empieza con +40 de dinero. Recaudar da +5 más y solo baja 1 de moral.', unlock:{text:'Gana una temporada', test:p=>Object.values(p.wins).some(v=>v>0)}},
+  {id:'enfermera', name:'Arantxa', title:'La enfermera', color:'#2F6B9A', d:'Los vecinos heridos vuelven tras un turno. Los daños en casas causan 1 herido menos.', unlock:{text:'Termina 3 temporadas', test:p=>p.seasons>=3}}
+];
+const NAMES = [['Miren','f'],['Joseba','m'],['Ane','f'],['Iker','m'],['Itziar','f'],['Mikel','m'],['Nerea','f'],['Aitor','m'],['Leire','f'],['Unai','m'],['Maite','f'],['Koldo','m'],['Edurne','f'],['Gorka','m'],['Amaia','f'],['Xabier','m'],['Lucía','f'],['Paco','m'],['Rosa','f'],['Andoni','m'],['Irati','f'],['Peio','m'],['Josune','f'],['Txema','m']];
+const OFICIOS = {
+  lenador:{m:'leñador',f:'leñadora',job:'talar',color:'#4E7A4F',d:'+2 madera extra al talar.'},
+  cantero:{m:'cantero',f:'cantera',job:'cantera',color:'#7E7A74',d:'+1 piedra extra y debilita menos la ladera.'},
+  agricultor:{m:'agricultor',f:'agricultora',job:'granja',color:'#A88420',d:'+2 comida extra en la granja. Si ha trabajado en la granja, las plagas hacen menos daño.'},
+  albanil:{m:'albañil',f:'albañil',job:null,color:'#B5502E',d:'Cuando construye, la obra cuesta 1 material menos.'},
+  comerciante:{m:'comerciante',f:'comerciante',job:'recaudar',color:'#B07A12',d:'+10 dinero extra al recaudar y casi no baja la moral.'},
+  bombero:{m:'bombero',f:'bombera',job:null,color:'#C2531F',d:'Mientras esté sano, el fuego se propaga menos.'},
+  medico:{m:'médico',f:'médica',job:null,color:'#2F6B9A',d:'Mientras esté sano, los daños causan menos heridos.'},
+  peon:{m:'sin oficio',f:'sin oficio',job:null,color:'#8A8478',d:'Hace de todo, sin bonificación.'}
+};
+const JOBS = [['talar','Talar'],['cantera','Cantera'],['granja','Granja'],['recaudar','Recaudar']];
+const JOB_VERB = {talar:'talando', cantera:'en la cantera', granja:'en la granja', recaudar:'recaudando'};
+const CAUSE_NAME = {agua:'las riadas', mar:'el mar', fuego:'el fuego', rayo:'los rayos', tierra:'los deslizamientos', nieve:'los aludes', hambre:'el hambre', calor:'el calor'};
+const SAVE_NAME = {dique:'los diques', escollera:'las escolleras', sacos:'los sacos', pararrayos:'los pararrayos', cortafuegos:'los cortafuegos', muro:'los muros', bosque:'el bosque, frenando aludes', evacuar:'las evacuaciones', refugio:'el refugio del ayuntamiento', aljibe:'el aljibe'};
+
+/* =========================================================
+   AZAR (con semilla para el reto diario)
+   ========================================================= */
+function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+function hashStr(s){ let h=1779033703; for (let i=0;i<s.length;i++){ h=Math.imul(h^s.charCodeAt(i),3432918353); h=h<<13|h>>>19; } return h>>>0; }
+let RS = Math.random, RI = Math.random;
+const rnd = (a,b,f) => a + Math.floor((f||RS)()*(b-a+1));
+const pick = (a,f) => a[Math.floor((f||RS)()*a.length)];
+const shuffle = (a,f) => { a = a.slice(); for (let i=a.length-1;i>0;i--){ const j=Math.floor((f||RS)()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
+const wpick = (obj,f) => { const ks=Object.keys(obj); let tot=0; ks.forEach(k=>tot+=obj[k]); let x=(f||RS)()*tot; for (const k of ks){ x-=obj[k]; if (x<0) return k; } return ks[ks.length-1]; };
+const cap = (s) => s.charAt(0).toUpperCase()+s.slice(1);
+const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+const nb4 = (i) => { const r=Math.floor(i/7), c=i%7, o=[]; if(r>0)o.push(i-7); if(r<7)o.push(i+7); if(c>0)o.push(i-1); if(c<6)o.push(i+1); return o; };
+const cheb = (a,b) => Math.max(Math.abs(Math.floor(a/7)-Math.floor(b/7)), Math.abs(a%7-b%7));
+const todayKey = () => { const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+const esc = (s) => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* =========================================================
+   PROGRESO Y RANKING
+   ========================================================= */
+const defaultProg = () => ({wins:{}, maxIdx:{}, total:0, seasons:0, test:false, best:0});
+let PROG = defaultProg();
+try { const s = localStorage.getItem('villarrio-progress'); if (s) PROG = Object.assign(defaultProg(), JSON.parse(s)); } catch(e) {}
+const CAPS = {db:null, user:null, uid:null, board:null, boardState:'idle', writing:Promise.resolve()};
+function mergeProg(a, b){
+  const o = defaultProg();
+  o.total = Math.max(a.total||0, b.total||0); o.seasons = Math.max(a.seasons||0, b.seasons||0);
+  o.best = Math.max(a.best||0, b.best||0); o.test = !!(a.test||b.test);
+  for (const k of new Set([...Object.keys(a.wins||{}), ...Object.keys(b.wins||{})])) o.wins[k] = Math.max((a.wins||{})[k]||0, (b.wins||{})[k]||0);
+  for (const k of new Set([...Object.keys(a.maxIdx||{}), ...Object.keys(b.maxIdx||{})])) o.maxIdx[k] = Math.max((a.maxIdx||{})[k]||0, (b.maxIdx||{})[k]||0);
+  return o;
+}
+function saveProg(){
+  try { localStorage.setItem('villarrio-progress', JSON.stringify(PROG)); } catch(e) {}
+  if (CAPS.db && CAPS.uid) {
+    const data = JSON.parse(JSON.stringify(PROG));
+    CAPS.writing = CAPS.writing.then(() => CAPS.db.doc('data/users/'+CAPS.uid+'/progress').set(data)).catch(()=>{});
+  }
+}
+async function initCaps(){
+  try {
+    if (!window.claude || !window.claude.use) return;
+    const [db, user] = await Promise.all([window.claude.use('db'), window.claude.use('user')]);
+    CAPS.db = db; CAPS.user = user;
+    if (db && user) CAPS.uid = await user.id();
+    if (db && CAPS.uid) {
+      try { const s = await db.doc('data/users/'+CAPS.uid+'/progress').get(); if (s.exists) PROG = mergeProg(PROG, s.data()); } catch(e) {}
+    }
+    loadBoard();
+    render();
+  } catch(e) {}
+}
+async function loadBoard(){
+  if (!CAPS.db) return;
+  CAPS.boardState = 'loading'; render();
+  const timer = setTimeout(() => { if (CAPS.boardState==='loading'){ CAPS.boardState='timeout'; render(); } }, 10000);
+  try {
+    const snap = await CAPS.db.collection('scores').where('date','==',todayKey()).limit(200).get();
+    clearTimeout(timer);
+    const rows = snap.docs.map(d => Object.assign({id:d.id}, d.data())).filter(r => typeof r.score === 'number').sort((a,b)=>b.score-a.score).slice(0,10);
+    let names = {};
+    if (CAPS.user && rows.length) { try { const ps = await CAPS.user.profiles(rows.map(r=>r.id)); rows.forEach(r => names[r.id] = (ps[r.id] && ps[r.id].name) || 'Alguien'); } catch(e) {} }
+    rows.forEach(r => r.name = names[r.id] || 'Alguien');
+    CAPS.board = rows; CAPS.boardState = 'ok';
+  } catch(e) { clearTimeout(timer); CAPS.boardState = 'error'; }
+  render();
+}
+async function submitDaily(score){
+  if (!CAPS.db || !CAPS.uid) return;
+  const ref = CAPS.db.doc('scores/'+CAPS.uid);
+  try {
+    const s = await ref.get();
+    const prev = s.exists ? s.data() : null;
+    if (prev && prev.date === todayKey() && prev.score >= score) { loadBoard(); return; }
+    await ref.set({date:todayKey(), score, idx:G.idx, won:!G.lost, town:G.town, alc:G.alc});
+    G.submitted = true;
+  } catch(e) { G.submitFail = true; }
+  loadBoard();
+}
+function boardHTML(){
+  if (!CAPS.db) return '';
+  let h = '<div class="card"><div class="label" style="margin-bottom:8px">Ranking del reto de hoy</div>';
+  if (CAPS.boardState==='loading') h += '<div class="muted" style="font-size:13px">Cargando…</div>';
+  else if (CAPS.boardState==='timeout' || CAPS.boardState==='error') h += '<div class="muted" style="font-size:13px">No se ha podido cargar el ranking ahora mismo.</div>';
+  else if (!CAPS.board || !CAPS.board.length) h += '<div class="muted" style="font-size:13px">Nadie ha jugado el reto de hoy todavía. ¡Sé el primero!</div>';
+  else h += '<div class="board">'+CAPS.board.map((r,i)=>'<div class="r'+(r.id===CAPS.uid?' me':'')+'"><span class="pos-n">'+(i+1)+'</span><span style="flex:1">'+esc(r.name)+'</span><span class="muted" style="font-size:12px">'+(r.won?'ganó':'desastre '+((r.idx||0)+1))+'</span><b>'+r.score+'</b></div>').join('')+'</div>';
+  return h + '</div>';
+}
+
+/* =========================================================
+   ESTADO
+   ========================================================= */
+let G = null, timer = null, UI = {screen:'menu', howto:false, town:'villarrio', alc:'ingeniera'};
+const T = (i) => G.tiles[i];
+const town = () => TOWNS[G.town];
+const unlockedTown = (k) => PROG.test || !TOWNS[k].unlock || TOWNS[k].unlock.test(PROG);
+const unlockedAlc = (a) => PROG.test || !a.unlock || a.unlock.test(PROG);
+const ofName = (w) => OFICIOS[w.of][w.g];
+const aytoIdx = () => G.tiles.findIndex(t => t.t==='A');
+const aytoDown = () => { const i=aytoIdx(); return i>=0 && G.tiles[i].dmg; };
+const obsOk = () => G.tiles.some(t => t.t==='O' && !t.dmg);
+const hasType = (k) => G.tiles.some(t => t.t===k);
+const aljibeOk = () => G.tiles.some(t => t.t==='W' && !t.dmg);
+const granjasOk = () => G.tiles.filter(t => t.t==='G' && !t.dmg).length;
+const obsLevel = () => Math.min(3, 1 + G.perks.radar + (obsOk()?1:0) + (G.alc==='meteorologa'?1:0));
+const intensity = (idx) => idx < 3 ? 1 : (idx < 6 ? 2 : 3);
+const healthy = (of) => G.workers.some(w => w.of===of && !w.gone && !w.inj);
+
+function computeGeo(){
+  const L = [], S = [], slide = new Set();
+  G.tiles.forEach((t,i) => { if (t.t==='L') L.push(i); if (t.t==='S') S.push(i); });
+  L.forEach(i => { for (let k=1;k<=2;k++){ const j=i+7*k; if (j<56 && BUILD.has(G.tiles[j].t)) slide.add(j); } });
+  G.LADERA = L; G.NIEVE = S; G.SLIDE = [...slide];
+  const first = (k) => G.tiles.findIndex(t => t.t===k);
+  G.WORK = {talar:first('B'), cantera:first('L'), granja:first('G'), recaudar:aytoIdx()};
+}
+
+function newWorker(of, temp){
+  const used = new Set(G.workers.map(w => w.name));
+  const free = NAMES.filter(n => !used.has(n[0]));
+  const [name, g] = free.length ? pick(free) : ['Vecino '+(G.workers.length+1), 'm'];
+  const houses = G.tiles.map((t,i)=>t.t==='C'?i:-1).filter(i=>i>=0);
+  const w = {id:'w'+(G.nextId++), name, g, of:of || pick(Object.keys(OFICIOS).filter(k=>k!=='peon')), home:pick(houses), inj:0, gone:false, temp:!!temp};
+  G.workers.push(w);
+  return w;
+}
+
+function newGame(opts){
+  const daily = opts.daily;
+  if (daily) { const seed = hashStr('villarrio-'+daily); RS = mulberry32(seed); RI = mulberry32(seed ^ 0x9e3779b9); }
+  else { RS = Math.random; RI = Math.random; }
+  const townKey = daily ? pick(Object.keys(TOWNS)) : opts.town;
+  const alc = daily ? pick(ALCALDES).id : opts.alc;
+  G = {
+    daily: daily || null, town: townKey, alc,
+    phase:'forecast', idx:0, turn:1, maxTurns:3,
+    tiles: TOWNS[townKey].map.join('').split('').map(t => ({t, dmg:false, dique:false, cheap:false, sacos:false, rayo:false, muro:false, evac:false})),
+    res:{pop:40, heridos:0, moral:70, dinero:60, madera:4, piedra:3, comida:12, riesgo:10},
+    workers:[], nextId:1,
+    alloc:{talar:[], cantera:[], granja:[], recaudar:[]}, busy:[], sel:null, msg:'', insp:null, heat:false,
+    perks:{voluntarios:0, radar:0, bomba:false, bomberos:false, carpinteros:false, muros:false},
+    chosen:[], fc:null, impact:null, result:null, lost:null, event:null,
+    dry:false, dryFarm:false, cheapDique:false, lostTurn:0, paperwork:false, sulky:null, lastAgri:false,
+    stats:{cause:{}, saves:{}, builds:{}, hist:[]}, lastEvent:null
+  };
+  computeGeo();
+  if (alc==='ingeniera') G.res.piedra += 3;
+  if (alc==='agricultor') G.res.comida += 8;
+  if (alc==='tesorero') G.res.dinero += 40;
+  ['lenador','cantero','agricultor','albanil','comerciante','bombero','medico','peon'].forEach(of => newWorker(of));
+  // calendario de desastres (igual para todos en el reto diario)
+  const pool = TOWNS[townKey].pool, pairs = PAIRS.filter(p => pool[p[0]] && pool[p[1]]);
+  G.schedule = [];
+  for (let i=0;i<SEASON;i++){
+    const comboP = i>=5 ? (i===SEASON-1 ? 0.7 : 0.4) : 0;
+    let types;
+    if (pairs.length && RS() < comboP) types = pick(pairs).slice();
+    else {
+      let k, guard=0;
+      do { k = wpick(pool); guard++; } while (guard<10 && i>=2 && G.schedule[i-1].types[0]===k && G.schedule[i-2].types[0]===k);
+      types = [k];
+    }
+    G.schedule.push({types, I:intensity(i)});
+  }
+  newForecast();
+}
+
+function availableWorkers(){
+  return G.workers.filter(w => !w.gone && w.id!==G.sulky && (!w.inj || (G.alc==='enfermera' && G.turn>=2)));
+}
+const assigned = () => new Set([].concat(G.alloc.talar, G.alloc.cantera, G.alloc.granja, G.alloc.recaudar, G.busy));
+const freeWorkers = () => { const a = assigned(); return availableWorkers().filter(w => !a.has(w.id)); };
+const W = (id) => G.workers.find(w => w.id===id);
+
+function cleanAlloc(){
+  const ok = new Set(availableWorkers().map(w=>w.id));
+  for (const k in G.alloc) G.alloc[k] = G.alloc[k].filter(id => ok.has(id));
+  G.busy = G.busy.filter(id => ok.has(id));
+}
+
+function newForecast(){
+  const s = G.schedule[G.idx];
+  const types = Object.keys(town().pool);
+  let decoy;
+  if (s.types.length===2 && RS()<0.5) decoy = [pick(s.types)];
+  else { let d, guard=0; do { d = [pick(types)]; guard++; } while (guard<20 && d[0]===s.types[0] && s.types.length===1); decoy = d; }
+  const lvl = obsLevel();
+  const pReal = lvl===1 ? rnd(45,70) : (lvl===2 ? rnd(65,85) : rnd(85,95));
+  G.fc = {real:s.types, decoy, pReal, I:s.I, lvl};
+  G.maxTurns = Math.max(1, (aytoDown() ? 2 : 3) - G.lostTurn); G.lostTurn = 0;
+  G.turn = 1; G.busy = []; G.sel = null; G.msg = ''; G.lastAgri = false;
+  G.sulky = null;
+  if (G.res.moral < 35) { const av = G.workers.filter(w=>!w.gone && !w.inj); if (av.length) G.sulky = pick(av).id; }
+  cleanAlloc();
+  if (G.paperwork) { const f = freeWorkers(); if (f.length) G.busy.push(pick(f).id); G.paperworkId = G.busy[0]; G.paperwork = false; } else G.paperworkId = null;
+}
+
+/* =========================================================
+   ACCIONES DE CONSTRUCCIÓN
+   ========================================================= */
+const ACTIONS = {
+  dique:{name:'Dique / escollera', cuad:1, cost:()=>({piedra: G.cheapDique ? 1 : Math.max(1, 3 - (G.alc==='ingeniera'?1:0) - (G.perks.muros?1:0))}), valid:(t)=>(t.t==='R'||t.t==='M') && !t.dique,
+    desc:'Toca un tramo de río (dique) o de mar (escollera). Frena el agua ahí, pero en el río la empuja río abajo.', apply:(t)=>{ t.dique=true; t.cheap=G.cheapDique; }},
+  sacos:{name:'Sacos', cuad:1, cost:()=>({dinero:8}), valid:(t)=>BUILD.has(t.t) && !t.sacos,
+    desc:'Toca un edificio. Lo protege de una inundación (los sacos se gastan).', apply:(t)=>{t.sacos=true;}},
+  cortafuegos:{name:'Cortafuegos', cuad:1, cost:()=>({}), valid:(t)=>t.t==='B',
+    desc:'Toca un bosque. Lo tala: el fuego no pasa por ahí y ganas +2 madera, pero la tierra se sujeta peor (+5% riesgo de ladera).',
+    apply:(t)=>{t.t='X'; G.res.madera+=2; G.res.riesgo=clamp(G.res.riesgo+5,0,95);}},
+  pararrayos:{name:'Pararrayos', cuad:1, cost:()=>({madera:2, dinero:15}), valid:(t)=>BUILD.has(t.t) && !t.rayo,
+    desc:'Toca un edificio. Protege de rayos esa casilla y las de alrededor.', apply:(t)=>{t.rayo=true;}},
+  muro:{name:'Muro', cuad:2, cost:()=>({piedra:Math.max(0,2-(G.alc==='ingeniera'?1:0)), madera:2}), valid:(t)=>(t.t==='L'||t.t==='S') && !t.muro,
+    desc:'Toca una ladera o un nevero. Ladera: −15% de riesgo de deslizamiento. Nevero: frena los aludes que salen o pasan por ahí.',
+    apply:(t)=>{ t.muro=true; if (t.t==='L') G.res.riesgo=clamp(G.res.riesgo-15,0,95); }},
+  evacuar:{name:'Evacuar', cuad:1, cost:()=>({comida:2}), valid:(t)=>t.t==='C' && !t.evac,
+    desc:'Toca una casa. Si le pasa algo en este desastre, nadie resulta herido.', apply:(t)=>{t.evac=true;}},
+  reparar:{name:'Reparar', cuad:1, cost:()=>({madera:2}), valid:(t)=>t.dmg,
+    desc:'Toca un edificio dañado para arreglarlo.', apply:(t)=>{t.dmg=false;}},
+  observatorio:{name:'Observatorio', cuad:2, cost:()=>({madera:4, dinero:30}), valid:(t)=>t.t==='P' && !hasType('O'),
+    desc:'Toca un prado. Mejora la previsión de los próximos desastres. Solo puedes tener uno.', apply:(t)=>{t.t='O';}},
+  aljibe:{name:'Aljibe', cuad:2, cost:()=>({piedra:3, madera:2}), valid:(t)=>t.t==='P' && !hasType('W'),
+    desc:'Toca un prado. Reserva de agua: en las sequías se pierde la mitad y las granjas siguen produciendo. Solo uno.', apply:(t)=>{t.t='W';}}
+};
+const RES_NAME = {dinero:'dinero', madera:'madera', piedra:'piedra', comida:'comida'};
+function costLabel(a){
+  const c = a.cost(); const parts = Object.keys(c).filter(k=>c[k]>0).map(k => c[k]+' '+RES_NAME[k]);
+  parts.push(a.cuad + (a.cuad>1?' personas':' persona'));
+  return parts.join(' · ');
+}
+function rankBuild(w){ return w.of==='albanil' ? 0 : (['peon','bombero','medico'].includes(w.of) ? 1 : 2); }
+function rankJob(w, job){ if (OFICIOS[w.of].job===job) return 0; if (['peon','bombero','medico'].includes(w.of)) return 1; if (w.of==='albanil') return 2; return 3; }
+function doAction(i){
+  const a = ACTIONS[G.sel]; const t = T(i);
+  if (!a || !a.valid(t, i)) return;
+  const fw = freeWorkers().sort((x,y)=>rankBuild(x)-rankBuild(y));
+  if (fw.length < a.cuad) { G.msg = 'No te queda gente libre este turno. Quita a alguien de producir.'; return render(); }
+  const crew = fw.slice(0, a.cuad);
+  const c = a.cost();
+  let note = '';
+  const alb = crew.find(w => w.of==='albanil');
+  if (alb) { const mats = ['piedra','madera'].filter(k => (c[k]||0) > 0).sort((x,y)=>c[y]-c[x]); if (mats.length) { c[mats[0]]--; note = ' '+alb.name+' (albañil) ahorra 1 de '+mats[0]+'.'; } }
+  for (const k in c) if (G.res[k] < c[k]) { G.msg = 'Te falta '+RES_NAME[k]+' ('+c[k]+' necesario).'; return render(); }
+  for (const k in c) G.res[k] -= c[k];
+  crew.forEach(w => G.busy.push(w.id));
+  const nm = G.sel==='dique' && t.t==='M' ? 'Escollera' : (G.sel==='dique' ? 'Dique' : a.name);
+  a.apply(t, i);
+  G.stats.builds[nm] = (G.stats.builds[nm]||0) + 1;
+  G.msg = nm + ' hecho por ' + crew.map(w=>w.name).join(' y ') + '.' + note;
+  if (freeWorkers().length < 1) G.sel = null;
+  render();
+}
+
+/* =========================================================
+   PRODUCCIÓN Y TURNOS
+   ========================================================= */
+function production(){
+  const r = {madera:0, piedra:0, comida:0, dinero:0, moral:0, riesgo:0};
+  G.alloc.talar.forEach(id => { const w=W(id); r.madera += 2 + (w.of==='lenador'?2:0) + (G.perks.carpinteros?1:0); r.riesgo += 4; });
+  G.alloc.cantera.forEach(id => { const w=W(id); r.piedra += 1 + (w.of==='cantero'?1:0); r.riesgo += w.of==='cantero'?3:6; });
+  const g = granjasOk(), base = g>=2 ? 2 : g;
+  G.alloc.granja.forEach(id => { const w=W(id); let v = base>0 ? base + (w.of==='agricultor'?2:0) + (G.alc==='agricultor'?2:0) : 0; if (G.dryFarm) v = Math.floor(v/2); r.comida += v; });
+  G.alloc.recaudar.forEach(id => { const w=W(id); r.dinero += 15 + (w.of==='comerciante'?10:0) + (G.alc==='tesorero'?5:0); r.moral -= (G.alc==='tesorero' || w.of==='comerciante') ? 1 : 2; });
+  return r;
+}
+function changeJob(job, d){
+  if (d > 0) { const f = freeWorkers().sort((x,y)=>rankJob(x,job)-rankJob(y,job)); if (f.length) G.alloc[job].push(f[0].id); }
+  else if (G.alloc[job].length) { const ids = G.alloc[job].slice().sort((a,b)=>rankJob(W(b),job)-rankJob(W(a),job)); G.alloc[job] = G.alloc[job].filter(id => id !== ids[0]); }
+  render();
+}
+function endTurn(){
+  const p = production(), r = G.res;
+  r.madera += p.madera; r.piedra += p.piedra; r.comida += p.comida; r.dinero += p.dinero;
+  r.moral = clamp(r.moral + p.moral, 0, 100); r.riesgo = clamp(r.riesgo + p.riesgo, 0, 95);
+  if (G.alloc.granja.some(id => W(id).of==='agricultor')) G.lastAgri = true;
+  const got = [];
+  if (p.madera) got.push('+'+p.madera+' madera'); if (p.piedra) got.push('+'+p.piedra+' piedra');
+  if (p.comida) got.push('+'+p.comida+' comida'); if (p.dinero) got.push('+'+p.dinero+' dinero');
+  G.msg = got.length ? 'Producción del turno: ' + got.join(', ') + '.' : '';
+  G.busy = []; G.sel = null; G.turn++;
+  cleanAlloc();
+  if (G.turn > G.maxTurns) startImpact(); else render();
+}
+
+/* =========================================================
+   DESASTRES
+   ========================================================= */
+function tileName(i){
+  const t = T(i);
+  if (t.t==='C') { const w = G.workers.find(x => x.home===i && !x.gone); return w ? 'la casa de '+w.name : 'una casa'; }
+  return {A:'el ayuntamiento', G:'una granja', O:'el observatorio', W:'el aljibe'}[t.t] || 'una casilla';
+}
+const save = (k, n) => { G.stats.saves[k] = (G.stats.saves[k]||0) + (n||1); };
+function damage(i, cause, ctx){
+  const t = T(i), r = G.res, nm = tileName(i), out = [];
+  if ((cause==='agua'||cause==='mar') && t.sacos) { t.sacos=false; save('sacos'); return [{text:'Los sacos salvan '+nm+'.', kind:'good', tiles:[[i,'ok']]}]; }
+  const already = t.dmg; t.dmg = true; ctx.dmg++; G.stats.cause[cause] = (G.stats.cause[cause]||0) + 1;
+  r.moral = clamp(r.moral-6, 0, 100);
+  if (t.t==='C') {
+    if (t.evac) { save('evacuar'); return [{text:cap(nm)+' queda dañada, pero estaba evacuada: nadie herido.', kind:'warn', tiles:[[i,'dmg']]}]; }
+    const her = Math.max(0, 2 - (healthy('medico')?1:0) - (G.alc==='enfermera'?1:0));
+    r.pop -= 3; r.heridos += her;
+    out.push({text:cap(nm)+(already?' queda en ruinas':' queda dañada')+': '+(her ? her+' herido'+(her>1?'s':'')+' y ' : '')+'una familia se marcha.', kind:'bad', tiles:[[i,'dmg']]});
+    G.workers.filter(w => w.home===i && !w.gone && !w.temp).forEach(w => {
+      if (healthy('medico') && w.of!=='medico' && RI() < 0.5) { out.push({text:'La atención médica evita que '+w.name+' acabe herid'+(w.g==='f'?'a':'o')+'.', kind:'good'}); return; }
+      if (w.inj) { w.gone = true; out.push({text:w.name+' ('+ofName(w)+') vuelve a resultar herid'+(w.g==='f'?'a':'o')+' y se marcha del pueblo.', kind:'bad'}); }
+      else { w.inj = 1; out.push({text:w.name+' ('+ofName(w)+'), que vive ahí, resulta herid'+(w.g==='f'?'a':'o')+': no podrá trabajar en la próxima preparación.', kind:'bad'}); }
+    });
+    return out;
+  }
+  if (t.t==='A') return [{text:'El ayuntamiento se queda sin luz: un turno menos de preparación hasta repararlo, y no sirve de refugio en las olas de calor.', kind:'cascade', tiles:[[i,'dmg']]}];
+  if (t.t==='G') return [{text:'Una granja queda dañada: dará menos comida hasta repararla.', kind:'cascade', tiles:[[i,'dmg']]}];
+  if (t.t==='W') return [{text:'El aljibe se agrieta: no te protegerá de la sequía hasta repararlo.', kind:'cascade', tiles:[[i,'dmg']]}];
+  return [{text:'El observatorio queda dañado: la previsión pierde precisión.', kind:'cascade', tiles:[[i,'dmg']]}];
+}
+function waterFlood(srcList, p0, cause, ev, ctx, isRiver){
+  let carry = 0; const flooded = new Set(), held = [], failed = [];
+  for (const s of srcList) {
+    const t = T(s);
+    if (t.dique && t.cheap && RI() < 0.35) { t.dique = false; t.cheap = false; failed.push(s); }
+    if (t.dique) { if (isRiver) carry += p0*0.6; held.push(s); continue; }
+    const pt = Math.min(0.9, p0 + carry); if (isRiver) carry *= 0.5;
+    nb4(s).forEach(n => { const tt = T(n).t; if (tt!=='R' && tt!=='M' && RI() < pt) flooded.add(n); });
+  }
+  if (failed.length) ev.push({text:(failed.length===1?'Un dique barato cede':'Ceden '+failed.length+' diques baratos')+'. El constructor ambulante ya se ha ido…', kind:'bad', tiles:failed.map(i=>[i,'dmg'])});
+  if (held.length) { save(isRiver?'dique':'escollera', held.length); ev.push({text:(isRiver ? (held.length===1?'El dique aguanta':'Los '+held.length+' diques aguantan')+', pero empujan el agua río abajo.' : (held.length===1?'La escollera aguanta las olas.':'Las '+held.length+' escolleras aguantan las olas.')), kind:'good', tiles:held.map(i=>[i,'ok'])}); }
+  if (flooded.size) ev.push({text:(isRiver?'El agua se sale del cauce':'Las olas entran')+' en '+flooded.size+' casilla'+(flooded.size>1?'s':'')+'.', kind:'warn', tiles:[...flooded].map(i=>[i,'flood'])});
+  else ev.push({text:isRiver?'El río no llega a desbordarse.':'El mar no consigue entrar en el pueblo.', kind:'good'});
+  [...flooded].filter(i => BUILD.has(T(i).t)).forEach(i => damage(i, cause, ctx).forEach(e => ev.push(e)));
+}
+const RESOLVE = {
+  riada(I, ev, ctx){
+    ev.push({text:'¡Riada! El río baja con fuerza.', kind:'title', tiles:town().river.map(i=>[i,'flood'])});
+    waterFlood(town().river, (0.12 + 0.1*I)*town().riadaMult - (G.perks.bomba?0.08:0), 'agua', ev, ctx, true);
+  },
+  temporal(I, ev, ctx){
+    const sea = G.tiles.map((t,i)=>t.t==='M'?i:-1).filter(i=>i>=0);
+    ev.push({text:'¡Temporal! Olas enormes golpean la costa.', kind:'title', tiles:sea.map(i=>[i,'flood'])});
+    waterFlood(sea, 0.15 + 0.12*I - (G.perks.bomba?0.05:0), 'mar', ev, ctx, false);
+  },
+  incendio(I, ev, ctx){
+    let src = G.tiles.map((t,i)=>t.t==='B'?i:-1).filter(i=>i>=0);
+    if (!src.length) src = G.tiles.map((t,i)=>t.t==='P'?i:-1).filter(i=>i>=0);
+    const starts = shuffle(src, RI).slice(0, I);
+    const PR = {B:.7, P:.3, L:.15, C:.45, A:.45, G:.45, O:.45, W:.2};
+    const mod = (ctx.dry?0.15:0) - (G.perks.bomberos?0.2:0) - (healthy('bombero')?0.12:0);
+    const burned = new Set(starts), blocked = new Set(), q = starts.slice();
+    while (q.length && burned.size < 26) {
+      const c = q.shift();
+      for (const n of nb4(c)) {
+        if (burned.has(n)) continue;
+        const tt = T(n).t;
+        if (tt === 'X') { blocked.add(n); continue; }
+        const pr = (PR[tt] || 0) + ((PR[tt]||0) > 0 ? mod : 0);
+        if (RI() < pr) { burned.add(n); q.push(n); }
+      }
+    }
+    ev.push({text:'¡Incendio forestal!'+(ctx.dry?' Con la tierra tan seca, prende enseguida.':' El fuego prende en el bosque.'), kind:'title', tiles:starts.map(i=>[i,'fire'])});
+    if (healthy('bombero')) { const b = G.workers.find(w=>w.of==='bombero' && !w.gone && !w.inj); ev.push({text:b.name+' ('+ofName(b)+') organiza a los vecinos para contener las llamas.', kind:'good'}); }
+    ev.push({text:'Las llamas se extienden por '+burned.size+' casillas.', kind:'warn', tiles:[...burned].map(i=>[i,'fire'])});
+    if (blocked.size) { save('cortafuegos'); ev.push({text:'Los cortafuegos frenan el avance del fuego.', kind:'good', tiles:[...blocked].map(i=>[i,'ok'])}); }
+    let trees = 0;
+    [...burned].forEach(i => { if (T(i).t === 'B') { T(i).t = 'Q'; trees++; } });
+    [...burned].filter(i => BUILD.has(T(i).t)).forEach(i => damage(i, 'fuego', ctx).forEach(e => ev.push(e)));
+    if (trees) { const add = 3*trees; G.res.riesgo = clamp(G.res.riesgo + add, 0, 95);
+      ev.push({text:'Sin árboles, la tierra se sujeta peor: +'+add+'% de riesgo de deslizamiento.', kind:'cascade'}); }
+  },
+  tormenta(I, ev, ctx){
+    ev.push({text:'¡Tormenta eléctrica! Empiezan a caer rayos.', kind:'title'});
+    const builds = G.tiles.map((t,i)=>BUILD.has(t.t)?i:-1).filter(i=>i>=0);
+    shuffle(builds, RI).slice(0, 2+I).forEach(i => {
+      const prot = G.tiles.some((t,j) => t.rayo && cheb(i,j) <= 1);
+      if (prot) { save('pararrayos'); ev.push({text:'Un pararrayos desvía el rayo que iba a '+tileName(i)+'.', kind:'good', tiles:[[i,'ok']]}); return; }
+      ev.push({text:'Cae un rayo sobre '+tileName(i)+'.', kind:'warn', tiles:[[i,'bolt']]});
+      damage(i, 'rayo', ctx).forEach(e => ev.push(e));
+    });
+  },
+  alud(I, ev, ctx){
+    ev.push({text:'¡Alud! La nieve acumulada se suelta de las cumbres.', kind:'title', tiles:G.NIEVE.map(i=>[i,'snow'])});
+    const pTrig = clamp(0.12*I + G.res.riesgo/250, 0, 0.8);
+    const cols = {};
+    G.NIEVE.forEach(i => { const c=i%7; if (cols[c]===undefined || i < cols[c]) cols[c] = i; });
+    let any = false;
+    Object.values(cols).forEach(s => {
+      if (RI() >= pTrig) return;
+      any = true;
+      if (T(s).muro) { save('muro'); ev.push({text:'El muro del nevero retiene la nieve.', kind:'good', tiles:[[s,'ok']]}); return; }
+      const path = [s];
+      for (let j = s+7; j < 56; j += 7) {
+        const t = T(j);
+        if (t.t==='S') { path.push(j); if (t.muro) { save('muro'); ev.push({text:'Un muro frena el alud a mitad de camino.', kind:'good', tiles:path.map(x=>[x,'snow']).concat([[j,'ok']])}); return; } continue; }
+        if (t.muro) { save('muro'); ev.push({text:'Un muro de la ladera frena el alud.', kind:'good', tiles:path.map(x=>[x,'snow']).concat([[j,'ok']])}); return; }
+        if (t.t==='B') { save('bosque'); ev.push({text:'El bosque frena el alud antes de que llegue a las casas.', kind:'good', tiles:path.map(x=>[x,'snow']).concat([[j,'ok']])}); return; }
+        if (BUILD.has(t.t)) { ev.push({text:'El alud baja la ladera y llega a '+tileName(j)+'.', kind:'warn', tiles:path.map(x=>[x,'snow']).concat([[j,'snow']])}); damage(j, 'nieve', ctx).forEach(e => ev.push(e)); return; }
+        path.push(j);
+      }
+      ev.push({text:'Un alud baja hasta el valle sin tocar ningún edificio.', kind:'info', tiles:path.map(x=>[x,'snow'])});
+    });
+    if (!any) ev.push({text:'La nieve aguanta en su sitio. Por esta vez.', kind:'good'});
+  },
+  sequia(I, ev, ctx){
+    ev.push({text:'¡Sequía! Semanas sin una gota de agua.', kind:'title'});
+    let need = 3*I; const al = aljibeOk();
+    if (al) { need = Math.ceil(need/2); save('aljibe'); ev.push({text:'El aljibe da agua al pueblo: se pierde la mitad.', kind:'good', tiles:[[G.tiles.findIndex(t=>t.t==='W'),'ok']]}); }
+    const lost = Math.min(need, G.res.comida); G.res.comida -= lost;
+    ev.push({text:'Se echan a perder '+lost+' de comida.', kind:'warn'});
+    if (lost < need) { G.res.moral = clamp(G.res.moral-8,0,100); G.stats.cause.hambre = (G.stats.cause.hambre||0)+1; ev.push({text:'No había reservas suficientes: la moral cae 8.', kind:'bad'}); }
+    G.res.moral = clamp(G.res.moral-3,0,100);
+    ctx.dry = true; G.dry = true;
+    if (!al) { G.dryFarm = true; ev.push({text:'Los campos se secan: las granjas darán la mitad en la próxima preparación.', kind:'cascade'}); }
+    ev.push({text:'La tierra queda seca: el próximo incendio será peor.', kind:'cascade'});
+  },
+  ola(I, ev, ctx){
+    ev.push({text:'¡Ola de calor! Temperaturas que no se recuerdan.', kind:'title'});
+    const luz = !aytoDown();
+    let her = (luz ? I : 2*I) - (healthy('medico')?1:0);
+    her = Math.max(0, her);
+    if (luz) { save('refugio'); ev.push({text:'El ayuntamiento abre como refugio fresco.', kind:'good', tiles:[[aytoIdx(),'ok']]}); }
+    else ev.push({text:'Sin luz en el ayuntamiento no hay refugio fresco: más gente lo pasa mal.', kind:'cascade', tiles:[[aytoIdx(),'dmg']]});
+    G.res.heridos += her; G.res.moral = clamp(G.res.moral-4,0,100);
+    if (her) { G.stats.cause.calor = (G.stats.cause.calor||0)+1; ev.push({text:her+' vecino'+(her>1?'s':'')+' con golpe de calor.', kind:'bad'}); }
+    if (I >= 2 && !luz) { const av = G.workers.filter(w=>!w.gone && !w.inj && !w.temp); if (av.length) { const w = pick(av, RI); w.inj = 1; ev.push({text:w.name+' ('+ofName(w)+') sufre un golpe de calor y no podrá trabajar en la próxima preparación.', kind:'bad'}); } }
+    ctx.dry = true; G.dry = true;
+    ev.push({text:'Todo queda muy seco: el próximo incendio será peor.', kind:'cascade'});
+  },
+  plaga(I, ev, ctx){
+    ev.push({text:'¡Plaga! Los insectos arrasan los cultivos y la despensa.', kind:'title', tiles:G.tiles.map((t,i)=>t.t==='G'?[i,'bolt']:null).filter(Boolean)});
+    let frac = 0.2 + 0.1*I; const half = G.lastAgri || G.alc==='agricultor';
+    if (half) { frac /= 2; ev.push({text:G.lastAgri ? 'Quien sabe de cultivos estaba en la granja y frena la plaga a tiempo.' : 'La experiencia del alcalde en el campo reduce las pérdidas.', kind:'good'}); }
+    const lost = Math.round(G.res.comida * frac);
+    G.res.comida -= lost; G.res.moral = clamp(G.res.moral-3,0,100);
+    ev.push({text:'Se pierden '+lost+' de comida.', kind:lost>0?'warn':'good'});
+  }
+};
+
+function startImpact(){
+  G.snap = JSON.parse(JSON.stringify(G.res));
+  G.snapTiles = G.tiles.map(t => ({t:t.t, dmg:t.dmg}));
+  G.res.heridos = 0;
+  G.workers.forEach(w => { if (w.inj) w.inj = 0; });
+  G.dryFarm = false;
+  const ev = [], ctx = {dmg:0, dry:G.dry}, I = G.fc.I, types = G.fc.real;
+  G.dry = false;
+  types.forEach(k => RESOLVE[k](I, ev, ctx));
+  if (G.SLIDE.length) {
+    const mult = Math.max(...types.map(k => SLIDE_MULT[k]));
+    const chance = (G.res.riesgo/100) * mult * (0.6 + 0.2*I);
+    if (mult > 0 && RI() < chance) {
+      ev.push({text:'¡Deslizamiento de tierra en la ladera!', kind:'cascade', tiles:G.LADERA.map(i=>[i,'slide'])});
+      shuffle(G.SLIDE, RI).slice(0, I >= 2 ? 2 : 1).forEach(i => damage(i, 'tierra', ctx).forEach(e => ev.push(e)));
+    } else if (mult > 0 && G.res.riesgo >= 30) {
+      ev.push({text:'La ladera cruje, pero aguanta… por ahora.', kind:'info', tiles:G.LADERA.map(i=>[i,'ok'])});
+    }
+  }
+  const need = Math.ceil(G.res.pop/6);
+  if (G.res.comida >= need) { G.res.comida -= need; G.res.moral = clamp(G.res.moral+1, 0, 100); ev.push({text:'El pueblo consume '+need+' de comida y se sobrepone (+1 moral).', kind:'info'}); }
+  else { G.res.comida = 0; G.res.moral = clamp(G.res.moral-15, 0, 100); G.stats.cause.hambre = (G.stats.cause.hambre||0)+1; ev.push({text:'No hay comida para todos: la moral cae 15.', kind:'bad'}); }
+  if (ctx.dmg === 0) { G.res.moral = clamp(G.res.moral+5, 0, 100); ev.push({text:'Ningún edificio dañado. El pueblo respira aliviado (+5 moral).', kind:'good'}); }
+  G.tiles.forEach(t => { t.evac = false; t.cheap = false; });
+  G.cheapDique = false;
+  G.workers = G.workers.filter(w => !w.temp);
+  for (const k in G.alloc) G.alloc[k] = G.alloc[k].filter(id => W(id));
+  G.lastDmg = ctx.dmg;
+  G.insp = null; G.heat = false;
+  G.impact = {events:ev, shown:1};
+  G.phase = 'impact'; G.msg = '';
+  render();
+  clearInterval(timer);
+  timer = setInterval(() => {
+    if (!G || G.phase !== 'impact') { clearInterval(timer); return; }
+    G.impact.shown++;
+    if (G.impact.shown >= G.impact.events.length) clearInterval(timer);
+    render();
+  }, 700);
+}
+
+/* =========================================================
+   MEJORAS Y EVENTOS
+   ========================================================= */
+const PERKS = [
+  {id:'voluntarios', name:'Voluntarios del monte', d:'Llega una persona nueva al pueblo para trabajar.', sw:'#4E7A4F', ok:()=>true, apply:()=>{ const w=newWorker(); G.msg = w.name+' ('+ofName(w)+') se une al pueblo.'; }},
+  {id:'radar', name:'Radar meteorológico', d:'La previsión es más precisa.', sw:'#7A5A9E', ok:()=>obsLevel()<3, apply:()=>G.perks.radar++},
+  {id:'bomba', name:'Bombas de achique', d:'En riadas y temporales se inundan menos casillas.', sw:'#2A62A0', ok:()=>!G.perks.bomba, apply:()=>G.perks.bomba=true},
+  {id:'bomberos', name:'Brigada de bomberos', d:'El fuego se propaga bastante menos.', sw:'#C2531F', ok:()=>!G.perks.bomberos, apply:()=>G.perks.bomberos=true},
+  {id:'carpinteros', name:'Serrería', d:'+1 madera por cada persona que tala.', sw:'#7A5A3A', ok:()=>!G.perks.carpinteros, apply:()=>G.perks.carpinteros=true},
+  {id:'muros', name:'Cantería', d:'Los diques y escolleras cuestan 1 piedra menos.', sw:'#8E8A84', ok:()=>!G.perks.muros, apply:()=>G.perks.muros=true},
+  {id:'ayuda', name:'Ayuda de la diputación', d:'+50 de dinero ahora.', sw:'#D99A2B', ok:()=>true, apply:()=>G.res.dinero+=50},
+  {id:'fiesta', name:'Romería', d:'+20 de moral ahora.', sw:'#B5502E', ok:()=>G.res.moral<90, apply:()=>G.res.moral=clamp(G.res.moral+20,0,100)},
+  {id:'silos', name:'Silos llenos', d:'+10 de comida ahora.', sw:'#C9B57E', ok:()=>true, apply:()=>G.res.comida+=10},
+  {id:'obras', name:'Brigada de obras', d:'Repara gratis todos los edificios dañados.', sw:'#5E5A52', ok:()=>G.tiles.some(t=>t.dmg), apply:()=>G.tiles.forEach(t=>t.dmg=false)},
+  {id:'reforestar', name:'Repoblación', d:'Los bosques quemados vuelven a crecer y la ladera se recupera (−15% riesgo).', sw:'#36673A', ok:()=>G.tiles.some(t=>t.t==='Q') || G.res.riesgo>=25, apply:()=>{ G.tiles.forEach(t=>{ if (t.t==='Q') t.t='B'; }); G.res.riesgo=clamp(G.res.riesgo-15,0,95); }}
+];
+const aliveWorkers = () => G.workers.filter(w => !w.gone);
+const EVENTS = [
+  {id:'constructor', cond:()=>true, mk:()=>({t:'Un constructor ambulante', x:'Ofrece hacer diques y escolleras muy baratos durante la próxima preparación. Pero no garantiza que aguanten.',
+    opts:[{l:'Aceptar', d:'Diques y escolleras a 1 piedra, pero cada uno puede ceder (35%).', a:()=>{G.cheapDique=true;}},{l:'No, gracias', d:'Nada cambia.', a:()=>{}}]})},
+  {id:'fiestas', cond:()=>true, mk:()=>({t:'Las fiestas del pueblo', x:'Los vecinos quieren celebrar que Villarrío sigue en pie.'.replace('Villarrío', town().name),
+    opts:[{l:'Celebrarlas', d:'+15 de moral, pero un turno menos de preparación.', a:()=>{G.res.moral=clamp(G.res.moral+15,0,100); G.lostTurn=1;}},{l:'No es momento', d:'−5 de moral.', a:()=>{G.res.moral=clamp(G.res.moral-5,0,100);}}]})},
+  {id:'refugiados', cond:()=>G.res.comida>=6, mk:()=>({t:'Una familia sin hogar', x:'Una familia de un pueblo cercano lo ha perdido todo y pide quedarse.',
+    opts:[{l:'Acogerla', d:'+4 vecinos y una persona más para trabajar. −6 de comida.', a:()=>{G.res.pop+=4; G.res.comida-=6; newWorker();}},{l:'No podemos', d:'−8 de moral.', a:()=>{G.res.moral=clamp(G.res.moral-8,0,100);}}]})},
+  {id:'mercado', cond:()=>true, mk:()=>({t:'Día de mercado', x:'Pasan comerciantes de la comarca con piedra, comida y ganas de comprar madera.',
+    opts:[{l:'Comprar piedra', d:'+4 piedra por 25 de dinero.', ok:()=>G.res.dinero>=25, a:()=>{G.res.dinero-=25; G.res.piedra+=4;}},{l:'Comprar comida', d:'+6 comida por 20 de dinero.', ok:()=>G.res.dinero>=20, a:()=>{G.res.dinero-=20; G.res.comida+=6;}},{l:'Vender madera', d:'−4 madera, +30 de dinero.', ok:()=>G.res.madera>=4, a:()=>{G.res.madera-=4; G.res.dinero+=30;}},{l:'No comprar nada', d:'Nada cambia.', a:()=>{}}]})},
+  {id:'bosqueviejo', cond:()=>G.tiles.filter(t=>t.t==='B').length>=2, mk:()=>({t:'El bosque viejo', x:'Un aserradero ofrece dinero por talar uno de los bosques más antiguos del pueblo.',
+    opts:[{l:'Venderlo', d:'+40 de dinero y +3 madera. Se tala un bosque (+8% riesgo de ladera).', a:()=>{ const b = G.tiles.map((t,i)=>t.t==='B'?i:-1).filter(i=>i>=0); T(pick(b)).t='X'; G.res.dinero+=40; G.res.madera+=3; G.res.riesgo=clamp(G.res.riesgo+8,0,95);}},{l:'Protegerlo', d:'+5 de moral.', a:()=>{G.res.moral=clamp(G.res.moral+5,0,100);}}]})},
+  {id:'periodista', cond:()=>G.lastDmg>0, mk:()=>({t:'Sales en las noticias', x:'Una televisión cuenta lo que le ha pasado a tu pueblo. Hay gente que quiere ayudar.',
+    opts:[{l:'Dar una entrevista', d:'+35 de dinero en donaciones.', a:()=>{G.res.dinero+=35;}},{l:'Mejor no', d:'+4 de moral: los vecinos agradecen la discreción.', a:()=>{G.res.moral=clamp(G.res.moral+4,0,100);}}]})},
+  {id:'hospital', cond:()=>G.workers.some(w=>w.inj && !w.gone), mk:()=>{ const w = pick(G.workers.filter(x=>x.inj && !x.gone)); return {t:'Un herido grave', x:w.name+' ('+ofName(w)+') sigue herid'+(w.g==='f'?'a':'o')+'. En el hospital de la ciudad se recuperaría enseguida.',
+    opts:[{l:'Llevarl'+(w.g==='f'?'a':'o')+' al hospital', d:'Vuelve a trabajar ya. −20 de dinero.', ok:()=>G.res.dinero>=20, a:()=>{G.res.dinero-=20; w.inj=0;}},{l:'Que se recupere aquí', d:'Se pierde la próxima preparación.', a:()=>{}}]}; }},
+  {id:'miedo', cond:()=>aliveWorkers().length>=5, mk:()=>{ const w = pick(aliveWorkers().filter(x=>!x.inj)); return {t:'Alguien quiere irse', x:w.name+' ('+ofName(w)+') tiene miedo y quiere marcharse del pueblo.',
+    opts:[{l:'Convencerl'+(w.g==='f'?'a':'o'), d:'−15 de dinero para arreglarle la casa. Se queda.', ok:()=>G.res.dinero>=15, a:()=>{G.res.dinero-=15;}},{l:'Dejarl'+(w.g==='f'?'a':'o')+' ir', d:'Pierdes a '+w.name+'. +3 de comida (una boca menos).', a:()=>{w.gone=true; G.res.comida+=3; G.res.pop-=1;}}]}; }},
+  {id:'montaneros', cond:()=>G.res.comida>=3, mk:()=>({t:'Montañeros voluntarios', x:'Un grupo de montañeros se ofrece a echar una mano durante el próximo desastre.',
+    opts:[{l:'Aceptar', d:'+2 personas solo para la próxima preparación. −3 de comida.', a:()=>{G.res.comida-=3; newWorker('peon',true); newWorker('peon',true);}},{l:'No hace falta', d:'Nada cambia.', a:()=>{}}]})},
+  {id:'subvencion', cond:()=>true, mk:()=>({t:'Una subvención', x:'La diputación da dinero para prevención, pero hay que rellenar mucho papeleo.',
+    opts:[{l:'Pedirla', d:'+50 de dinero, pero alguien pierde el primer turno haciendo papeleo.', a:()=>{G.res.dinero+=50; G.paperwork=true;}},{l:'Demasiado papeleo', d:'Nada cambia.', a:()=>{}}]})}
+];
+
+function toResult(){
+  const r = G.res;
+  if (r.pop < 15) G.lost = 'Se han marchado demasiados vecinos: '+town().name+' se queda vacío.';
+  else if (r.moral <= 0) G.lost = 'La moral se ha hundido: los vecinos abandonan el pueblo.';
+  else if (!aliveWorkers().length) G.lost = 'No queda nadie que pueda trabajar en el pueblo.';
+  G.stats.hist.push({n:G.idx+1, types:G.fc.real.slice(), pop:r.pop, moral:r.moral, dmg:G.lastDmg});
+  G.result = {offers: shuffle(PERKS.filter(p => p.ok())).slice(0,3)};
+  G.phase = 'result'; render();
+}
+function choosePerk(id){
+  const p = PERKS.find(x => x.id === id); G.msg=''; p.apply(); G.chosen.push(p.name);
+  G.idx++;
+  if (G.idx >= SEASON) return finish();
+  const cands = EVENTS.filter(e => e.id !== G.lastEvent && e.cond());
+  if (RS() < 0.7 && cands.length) {
+    const e = pick(cands); G.lastEvent = e.id;
+    G.event = e.mk(); G.phase = 'event'; return render();
+  }
+  newForecast(); G.phase = 'forecast'; render();
+}
+function chooseEvent(k){
+  const o = G.event.opts.filter(o => !o.ok || o.ok())[k]; o.a();
+  G.event = null; newForecast(); G.phase = 'forecast'; render();
+}
+function score(){ return (G.lost ? G.idx : SEASON)*100 + Math.max(0,G.res.pop)*10 + G.res.moral*3 + aliveWorkers().length*20 + (G.lost?0:500); }
+function finish(){
+  G.phase = 'end'; G.final = score();
+  const before = JSON.parse(JSON.stringify(PROG));
+  const reached = G.lost ? G.idx : SEASON-1;
+  PROG.total += G.lost ? G.idx : SEASON;
+  PROG.seasons += 1;
+  PROG.maxIdx[G.town] = Math.max(PROG.maxIdx[G.town]||0, reached);
+  if (!G.lost) PROG.wins[G.town] = (PROG.wins[G.town]||0) + 1;
+  G.record = G.final > (PROG.best||0); PROG.best = Math.max(PROG.best||0, G.final);
+  G.unlocked = [];
+  Object.keys(TOWNS).forEach(k => { const u = TOWNS[k].unlock; if (u && !u.test(before) && u.test(PROG)) G.unlocked.push('Pueblo: '+TOWNS[k].name); });
+  ALCALDES.forEach(a => { const u = a.unlock; if (u && !u.test(before) && u.test(PROG)) G.unlocked.push('Alcalde: '+a.title+' ('+a.name+')'); });
+  saveProg();
+  if (G.daily) submitDaily(G.final);
+  render();
+}
+
+/* =========================================================
+   MAPA DE RIESGO
+   ========================================================= */
+function riskFor(types, I){
+  const acc = new Array(56).fill(0);
+  const add = (i,p) => { if (BUILD.has(T(i).t)) acc[i] = 1 - (1-acc[i])*(1-clamp(p,0,1)); };
+  const water = (src, p0, river) => { let carry = 0; for (const s of src) { if (T(s).dique) { if (river) carry += p0*0.6; continue; } const pt = Math.min(0.9, p0 + carry); if (river) carry *= 0.5; nb4(s).forEach(n => { if (!T(n).sacos) add(n, pt); }); } };
+  types.forEach(k => {
+    if (k==='riada') water(town().river, (0.12+0.1*I)*town().riadaMult - (G.perks.bomba?0.08:0), true);
+    if (k==='temporal') water(G.tiles.map((t,i)=>t.t==='M'?i:-1).filter(i=>i>=0), 0.15+0.12*I-(G.perks.bomba?0.05:0), false);
+    if (k==='incendio') {
+      const f = (G.dry||types.includes('sequia')||types.includes('ola') ? 1.3 : 1) * (healthy('bombero')?0.8:1) * (G.perks.bomberos?0.7:1);
+      G.tiles.forEach((t,b) => { if (!BUILD.has(t.t)) return; G.tiles.forEach((u,j) => { if (u.t!=='B') return; const d = cheb(b,j); if (d===1) add(b, 0.18*I*f); else if (d===2) add(b, 0.07*I*f); }); });
+    }
+    if (k==='tormenta') { const bs = G.tiles.map((t,i)=>BUILD.has(t.t)?i:-1).filter(i=>i>=0); const p = Math.min(0.95, (2+I)/bs.length); bs.forEach(i => { if (!G.tiles.some((t,j)=>t.rayo && cheb(i,j)<=1)) add(i, p); }); }
+    if (k==='alud') {
+      const pT = clamp(0.12*I + G.res.riesgo/250, 0, 0.8), cols = {};
+      G.NIEVE.forEach(i => { const c=i%7; if (cols[c]===undefined || i<cols[c]) cols[c]=i; });
+      Object.values(cols).forEach(s => { if (T(s).muro) return; for (let j=s+7;j<56;j+=7){ const t=T(j); if (t.t==='S'){ if (t.muro) return; continue; } if (t.muro || t.t==='B') return; if (BUILD.has(t.t)) { add(j, pT); return; } } });
+    }
+  });
+  if (G.SLIDE.length) {
+    const mult = Math.max(...types.map(k => SLIDE_MULT[k]));
+    const ch = (G.res.riesgo/100)*mult*(0.6+0.2*I), kk = I>=2?2:1;
+    G.SLIDE.forEach(i => add(i, ch*kk/G.SLIDE.length));
+  }
+  return acc;
+}
+function riskMap(){
+  const f = G.fc, a = riskFor(f.real, f.I), b = riskFor(f.decoy, f.I), p = f.pReal/100;
+  return a.map((v,i) => v*p + b[i]*(1-p));
+}
+
+/* =========================================================
+   FICHA DE CASILLA
+   ========================================================= */
+const INFO = {
+  B:{name:'Bosque', what:'Árboles. Si pones gente a talar, sacas madera de aquí. Los árboles sujetan la tierra y frenan los aludes.'},
+  X:{name:'Claro talado', what:'Bosque cortado. El fuego no pasa por aquí: funciona como cortafuegos. Pero ya no frena aludes.'},
+  Q:{name:'Bosque quemado', what:'Lo que queda tras un incendio. Ya no arde, pero sin raíces la tierra se sujeta peor.'},
+  L:{name:'Ladera', what:'Pendiente de tierra y roca. De aquí sale la piedra de la cantera. Si se debilita mucho, puede deslizarse.'},
+  P:{name:'Prado', what:'Campo abierto. Aquí puedes construir el observatorio o el aljibe.'},
+  R:{name:'Río', what:'Tramo del río. En las riadas el agua se sale hacia las casillas de al lado.'},
+  M:{name:'Mar', what:'En los temporales las olas inundan las casillas de la costa. Puedes poner una escollera para frenarlas.'},
+  S:{name:'Nevero', what:'Nieve acumulada en la cumbre. Puede soltar un alud que baja por su columna hasta chocar con bosque, un muro o un edificio.'},
+  C:{name:'Casa', what:'Aquí viven varias familias. Si se daña, hay heridos, alguna familia se marcha y baja la moral.'},
+  A:{name:'Ayuntamiento', what:'El centro del pueblo. Aquí se recauda. Si se queda sin luz, tienes un turno menos para prepararte y no sirve de refugio en olas de calor.'},
+  G:{name:'Granja', what:'Produce la comida que necesita el pueblo después de cada desastre.'},
+  O:{name:'Observatorio', what:'Mejora la precisión de la previsión mientras no esté dañado.'},
+  W:{name:'Aljibe', what:'Reserva de agua. En las sequías se pierde la mitad y las granjas siguen produciendo.'}
+};
+function tileRisks(i){
+  const t = T(i), n = nb4(i), out = [];
+  const nearRiver = n.some(j => T(j).t === 'R'), nearSea = n.some(j => T(j).t === 'M');
+  const nearFire = n.some(j => ['B','P'].includes(T(j).t));
+  const rayoCover = G.tiles.some((x,j) => x.rayo && cheb(i,j) <= 1);
+  if (t.t === 'B') out.push(['bad','Incendio: arde muy fácil y propaga el fuego.'], ['warn','Si se quema o se tala, la tierra se sujeta peor y deja pasar aludes.']);
+  if (t.t === 'P') out.push(['warn','Incendio: puede arder y pasar el fuego a casillas vecinas.']);
+  if (t.t === 'L') out.push([G.res.riesgo>=30?'bad':'warn','Deslizamiento: el riesgo está en '+G.res.riesgo+'%. Sube al talar, sacar piedra o perder bosque. Con lluvia es más probable.'], ['info','Si se desliza, arrastra lo que hay justo debajo.']);
+  if (t.t === 'S') out.push(['bad','Alud: con nevadas puede soltarse y bajar por esta columna.'], ['info', t.muro ? 'Tiene muro: retiene la nieve.' : 'Un muro aquí retiene la nieve.']);
+  if (t.t === 'R') { const pos = town().river.indexOf(i); out.push(['warn','Riada: puede inundar las casillas de al lado.']); if (pos>=0) out.push(['info','Tramo '+(pos+1)+' de '+town().river.length+' (de arriba abajo). Un dique río arriba empuja más agua hacia aquí.']); }
+  if (t.t === 'M') out.push(['warn','Temporal: las olas pueden entrar en las casillas de al lado.']);
+  if (BUILD.has(t.t)) {
+    if (nearRiver) out.push(['bad','Riada: está junto al río.']);
+    if (nearSea) out.push(['bad','Temporal: está junto al mar.']);
+    if (nearFire) out.push(['warn','Incendio: tiene bosque o prado al lado.']);
+    if (G.SLIDE.includes(i)) out.push(['bad','Deslizamiento: está justo debajo de la ladera.']);
+    if (G.NIEVE.length) { const c = i%7; if (G.NIEVE.some(s => s%7===c && s<i)) out.push(['warn','Alud: hay un nevero arriba en esta columna.']); }
+    out.push(rayoCover ? ['good','Rayos: protegido por un pararrayos cercano.'] : ['warn','Rayos: en una tormenta le puede caer uno.']);
+  }
+  if (t.t === 'X' || t.t === 'Q') out.push(['good','Ya no puede arder.']);
+  return out;
+}
+function tileState(i){
+  const t = T(i), s = [];
+  if (t.dmg) s.push('Dañado');
+  if (t.dique) s.push(t.t==='M' ? 'Con escollera' : 'Con dique'+(t.cheap?' (barato)':''));
+  if (t.sacos) s.push('Con sacos'); if (t.rayo) s.push('Con pararrayos'); if (t.muro) s.push('Con muro'); if (t.evac) s.push('Evacuada');
+  for (const k in G.WORK) if (G.WORK[k] === i && G.alloc[k].length) s.push(G.alloc[k].length+' trabajando');
+  const who = G.workers.filter(w => w.home===i && !w.gone).map(w => w.name);
+  if (who.length) s.push('Viven: '+who.join(', '));
+  return s;
+}
+function infoHTML(){
+  if (G.insp == null) return '<div class="muted" style="font-size:12.5px;text-align:center">Toca cualquier casilla del mapa para ver qué es.</div>';
+  const i = G.insp, t = T(i), inf = INFO[t.t];
+  const st = tileState(i), risks = tileRisks(i);
+  const acts = Object.keys(ACTIONS).filter(k => ACTIONS[k].valid(t, i));
+  const work = {B:'Talar (producción): da madera.', L:'Cantera (producción): da piedra.', G:'Granja (producción): da comida.', A:'Recaudar (producción): da dinero.'}[t.t];
+  let h = '<div class="info"><div class="row"><div style="display:flex;gap:10px;align-items:center"><div class="sw" style="background:'+BG[t.t]+'">'+svg(t.t)+'</div><h3 style="font-size:17px">'+inf.name+'</h3></div><button class="x" data-close="1" aria-label="Cerrar ficha">✕</button></div>';
+  if (st.length) h += '<div style="display:flex;gap:6px;flex-wrap:wrap">'+st.map(x=>'<span class="tag'+(x==='Dañado'?' bad':'')+'">'+esc(x)+'</span>').join('')+'</div>';
+  h += '<div style="font-size:13.5px;line-height:1.45">'+inf.what+'</div>';
+  if (BUILD.has(t.t) && (G.phase==='prep' || G.phase==='forecast')) { const r = Math.round(riskMap()[i]*100); h += '<div style="font-size:13px"><b>Riesgo de daño en el próximo desastre: '+r+'%</b> <span class="muted">(según la previsión)</span></div>'; }
+  if (work || acts.length) {
+    h += '<div class="label">Qué puedes hacer</div>';
+    if (work) h += '<div style="font-size:13px;line-height:1.4">'+work+'</div>';
+    if (acts.length) {
+      if (G.phase === 'prep') h += '<div style="display:flex;gap:6px;flex-wrap:wrap">'+acts.map(k=>'<button class="doat" data-doat="'+k+'">'+(k==='dique'&&t.t==='M'?'Escollera':(k==='dique'?'Dique':ACTIONS[k].name))+' <span>'+costLabel(ACTIONS[k])+'</span></button>').join('')+'</div>';
+      else h += '<div style="font-size:13px;line-height:1.4">'+acts.map(k=>ACTIONS[k].name+' ('+costLabel(ACTIONS[k])+')').join(' · ')+' <span class="muted">— en la preparación</span></div>';
+    }
+  }
+  if (risks.length) h += '<div class="label">Qué le puede pasar</div><div class="log">'+risks.map(([k,x])=>'<div class="e k-'+k+'" style="font-size:13px;animation:none"><div class="dot"></div><div>'+x+'</div></div>').join('')+'</div>';
+  return h + '</div>';
+}
+
+/* =========================================================
+   RENDER
+   ========================================================= */
+function svg(t){ return '<svg class="ic" viewBox="0 0 28 28" aria-hidden="true">'+ICON[t]+'</svg>'; }
+function mapHTML(mode){
+  const ov = {};
+  if (mode === 'impact') G.impact.events.slice(0, G.impact.shown).forEach(e => (e.tiles||[]).forEach(([i,k]) => { (ov[i] = ov[i] || new Set()).add(k); }));
+  const a = G.sel ? ACTIONS[G.sel] : null;
+  const heat = G.heat && (mode==='prep' || mode==='view') && G.fc ? riskMap() : null;
+  let h = '<div class="map">';
+  G.tiles.forEach((t, i) => {
+    const base = mode === 'impact' ? G.snapTiles[i] : t;
+    const o = ov[i] || new Set();
+    const dmgShown = mode === 'impact' ? (base.dmg || o.has('dmg')) : t.dmg;
+    let cls = 'tile' + (dmgShown && BUILD.has(base.t) ? ' broken' : '');
+    let canPick = false;
+    if (mode === 'prep' && a) { canPick = a.valid(t, i); cls += canPick ? ' pick' : ' nopick'; }
+    const clickable = mode !== 'impact';
+    if (clickable) cls += ' click';
+    if (clickable && G.insp === i) cls += ' insp';
+    if (heat && !BUILD.has(t.t)) cls += ' heatdim';
+    const label = canPick ? ' aria-label="'+a.name+' en esta casilla"' : ' aria-label="'+INFO[base.t].name+'"';
+    h += '<button class="'+cls+'" style="background:'+BG[base.t]+'" data-tile="'+i+'"'+(clickable?'':' disabled')+label+'>';
+    h += svg(base.t);
+    if (t.dique) h += '<div class="dique'+(t.cheap?' cheap':'')+'"></div>';
+    if (t.muro) h += '<div class="muro"></div>';
+    if (t.sacos && mode !== 'impact') h += '<div class="sacos"></div>';
+    ['flood','fire','slide','snow','bolt'].forEach(k => { if (o.has(k)) h += '<div class="ov '+k+'"></div>'; });
+    if (heat && BUILD.has(t.t)) { const r = heat[i]; if (r >= 0.02) h += '<div class="ov heat" style="background:rgba(176,52,14,'+(0.18+0.7*Math.min(1,r)).toFixed(2)+')"><span>'+Math.round(r*100)+'%</span></div>'; }
+    if (t.rayo) h += '<div class="badge b-rayo"><svg width="8" height="10" viewBox="0 0 10 12" aria-hidden="true"><path d="M6 0 L1 7 L5 7 L4 12 L9 5 L5 5 Z" fill="#23262B"/></svg></div>';
+    if (t.evac && mode !== 'impact') h += '<div class="badge b-evac">E</div>';
+    if (dmgShown && BUILD.has(base.t)) h += '<div class="badge b-dmg">✕</div>';
+    else if (o.has('ok')) h += '<div class="badge b-ok">✓</div>';
+    if (mode === 'prep') { for (const k in G.WORK) if (G.WORK[k] === i && G.alloc[k].length) h += '<div class="badge b-work">'+G.alloc[k].length+'</div>'; }
+    h += '</button>';
+  });
+  return h + '</div>';
+}
+function headerHTML(){
+  let s = '<div class="season">';
+  for (let i=0;i<SEASON;i++) s += '<div class="'+(i<G.idx?'done':(i===G.idx?'now':''))+'"></div>';
+  s += '</div>';
+  const alc = ALCALDES.find(a=>a.id===G.alc);
+  return '<div class="row"><div><h3 style="font-size:16px">'+town().name+(G.daily?' · Reto diario':'')+'</h3><div class="muted" style="font-size:11.5px">'+alc.title+' ('+alc.name+')</div></div><div style="display:flex;align-items:center;gap:10px"><div class="muted" style="font-size:13px">Desastre '+Math.min(G.idx+1,SEASON)+' de '+SEASON+'</div><button class="menubtn" data-go="menu">Menú</button></div></div>'+s;
+}
+function resHTML(proj){
+  const r = G.res, p = proj || {};
+  const d = (k, bad) => { const v = p[k]; if (!v) return ''; const isBad = bad ? v>0 : v<0; return '<span class="d '+(isBad?'neg':'pos')+'">'+(v>0?'+':'')+v+'</span>'; };
+  const avail = availableWorkers().length;
+  const cells = [
+    ['Vecinos', r.pop + (r.heridos?' <span class="d neg">'+r.heridos+' her.</span>':'')],
+    ['Moral', r.moral+'%'+d('moral')],
+    ['Dinero', r.dinero+d('dinero')],
+    ['Gente libre', (G.phase==='prep' ? freeWorkers().length+'/' : '')+avail],
+    ['Madera', r.madera+d('madera')],
+    ['Piedra', r.piedra+d('piedra')],
+    ['Comida', r.comida+d('comida')],
+    ['Riesgo ladera', r.riesgo+'%'+d('riesgo', true)]
+  ];
+  return '<div class="res">'+cells.map(c=>'<div><div class="k">'+c[0]+'</div><div class="v">'+c[1]+'</div></div>').join('')+'</div>';
+}
+const optName = (types) => types.map(k => DIS[k].fore).join(' + ');
+function forecastOptions(){ const f = G.fc; return [[f.real, f.pReal], [f.decoy, 100-f.pReal]].sort((a,b)=>b[1]-a[1]); }
+function forecastBars(){
+  return forecastOptions().map(([k,p]) => '<div style="display:flex;flex-direction:column;gap:4px"><div class="row" style="font-size:14px"><span>'+optName(k)+(k.length>1?' <span class="chip" style="background:#7A5A9E;font-size:10px;padding:2px 7px">combinado</span>':'')+'</span><b>'+p+'%</b></div><div class="bar"><div style="width:'+p+'%;background:'+DIS[k[0]].color+'"></div></div></div>').join('');
+}
+function warnings(){
+  const w = [];
+  if (aytoDown()) w.push('El ayuntamiento sigue sin luz: un turno menos para prepararte.');
+  const dm = G.tiles.filter(t => t.dmg).length;
+  if (dm) w.push('Tienes '+dm+' edificio'+(dm>1?'s':'')+' dañado'+(dm>1?'s':'')+'. Puedes repararlos con madera.');
+  if (G.res.riesgo >= 30 && G.SLIDE.length) w.push('La ladera está inestable ('+G.res.riesgo+'%). Lo que hay debajo corre peligro.');
+  if (G.res.comida < Math.ceil(G.res.pop/6)) w.push('No tienes comida suficiente para después del desastre.');
+  if (G.dry) w.push('La tierra está seca: si hay incendio, será peor.');
+  if (G.dryFarm) w.push('Tras la sequía, las granjas dan la mitad en esta preparación.');
+  if (G.cheapDique) w.push('El constructor ambulante está aquí: diques y escolleras a 1 piedra (pueden ceder).');
+  const inj = G.workers.filter(w => w.inj && !w.gone);
+  if (inj.length) w.push('Herid'+(inj.length>1?'os':(inj[0].g==='f'?'a':'o'))+': '+inj.map(w=>w.name).join(', ')+(G.alc==='enfermera'?' (vuelven en el turno 2).':' (no trabajan en esta preparación).'));
+  if (G.sulky) { const s = W(G.sulky); if (s) w.push(s.name+' está desanimad'+(s.g==='f'?'a':'o')+' por la baja moral y no trabajará en esta preparación.'); }
+  return w.map(x => '<div class="warnline">'+x+'</div>').join('');
+}
+function heatBtn(){ return '<button class="heatbtn'+(G.heat?' on':'')+'" data-heat="1">'+(G.heat?'Ocultar riesgo':'Ver mapa de riesgo')+'</button>'; }
+function heatLegend(){ return G.heat ? '<div class="muted" style="font-size:12px;line-height:1.4">El % es la probabilidad estimada de que cada edificio sufra daños en el próximo desastre, según la previsión. Sequía, ola de calor y plaga no dañan edificios.</div>' : ''; }
+function personStatus(w){
+  if (w.gone) return 'se ha ido';
+  if (w.inj && !(G.alc==='enfermera' && G.turn>=2 && G.phase==='prep')) return 'herid'+(w.g==='f'?'a':'o');
+  if (w.id===G.sulky) return 'desanimad'+(w.g==='f'?'a':'o');
+  if (w.id===G.paperworkId && G.turn===1 && G.busy.includes(w.id)) return 'papeleo';
+  for (const k in G.alloc) if (G.alloc[k].includes(w.id)) return JOB_VERB[k];
+  if (G.busy.includes(w.id)) return 'construyendo';
+  return 'libre';
+}
+function peopleHTML(){
+  return '<div class="people">'+G.workers.filter(w=>!w.gone).map(w => { const st = personStatus(w); const out = ['herida','herido','desanimada','desanimado','papeleo'].includes(st);
+    return '<button class="person'+(out?' out':'')+'" data-person="'+w.id+'"><div class="av" style="background:'+OFICIOS[w.of].color+'">'+w.name.charAt(0)+'</div><div><div class="nm">'+esc(w.name)+(w.temp?' (temporal)':'')+'</div><div class="st">'+ofName(w)+' · '+st+'</div></div></button>'; }).join('')+'</div>';
+}
+function lineChart(vals, color, label, max){
+  const w = 360, h = 120, pl = 30, pr = 10, pt = 12, pb = 22;
+  const n = vals.length, x = (i) => pl + (n<=1?0:(w-pl-pr)*i/(n-1)), y = (v) => pt + (h-pt-pb)*(1 - v/max);
+  let s = '<svg viewBox="0 0 '+w+' '+h+'" role="img" aria-label="'+label+' a lo largo de la temporada">';
+  [0, max/2, max].forEach(g => { s += '<line x1="'+pl+'" x2="'+(w-pr)+'" y1="'+y(g)+'" y2="'+y(g)+'" stroke="#E6DFCF" stroke-width="1"/><text x="'+(pl-6)+'" y="'+(y(g)+4)+'" font-size="10" text-anchor="end" fill="#5E5A52">'+Math.round(g)+'</text>'; });
+  s += '<polyline fill="none" stroke="'+color+'" stroke-width="2" stroke-linejoin="round" points="'+vals.map((v,i)=>x(i)+','+y(v)).join(' ')+'"/>';
+  vals.forEach((v,i) => { s += '<circle cx="'+x(i)+'" cy="'+y(v)+'" r="4" fill="'+color+'" stroke="#fff" stroke-width="2"><title>'+(i===0?'Inicio':'Tras el desastre '+i)+': '+v+'</title></circle>'; s += '<text x="'+x(i)+'" y="'+(h-6)+'" font-size="10" text-anchor="middle" fill="#5E5A52">'+(i===0?'ini':i)+'</text>'; });
+  return s + '</svg>';
+}
+function barChart(vals){
+  const w = 360, h = 110, pl = 30, pb = 22, pt = 10, max = Math.max(3, ...vals);
+  const bw = (w-pl-10)/Math.max(vals.length,1);
+  let s = '<svg viewBox="0 0 '+w+' '+h+'" role="img" aria-label="Edificios dañados en cada desastre">';
+  [0, max].forEach(g => { const yy = pt+(h-pt-pb)*(1-g/max); s += '<line x1="'+pl+'" x2="'+(w-10)+'" y1="'+yy+'" y2="'+yy+'" stroke="#E6DFCF"/><text x="'+(pl-6)+'" y="'+(yy+4)+'" font-size="10" text-anchor="end" fill="#5E5A52">'+g+'</text>'; });
+  vals.forEach((v,i) => { const bh = (h-pt-pb)*v/max, xx = pl + i*bw + 4; s += '<rect x="'+xx+'" y="'+(h-pb-bh)+'" width="'+(bw-8)+'" height="'+Math.max(bh,0)+'" rx="4" fill="#C2531F"><title>Desastre '+(i+1)+': '+v+' dañados</title></rect><text x="'+(xx+(bw-8)/2)+'" y="'+(h-6)+'" font-size="10" text-anchor="middle" fill="#5E5A52">'+(i+1)+'</text>'; });
+  return s + '</svg>';
+}
+const topOf = (o) => { const ks = Object.keys(o).filter(k=>o[k]>0).sort((a,b)=>o[b]-o[a]); return ks.length ? [ks[0], o[ks[0]]] : null; };
+
+function render(){
+  const app = document.getElementById('app');
+  let h = '';
+  if (UI.screen === 'menu' || !G && UI.screen !== 'setup') {
+    const dk = todayKey(), dseed = mulberry32(hashStr('villarrio-'+dk)), dTown = TOWNS[pick(Object.keys(TOWNS), dseed)], dAlc = pick(ALCALDES, dseed);
+    h += '<div style="display:flex;flex-direction:column;gap:6px;margin-top:8px"><div class="label">Prototipo jugable</div><h1 style="font-size:34px">Villarrío</h1><div class="muted" style="font-size:15px">Haz que tu pueblo sobreviva a una temporada de '+SEASON+' desastres.</div></div>';
+    h += '<button class="btn" data-go="setup">Nueva temporada<small>Elige pueblo y alcalde</small></button>';
+    h += '<button class="btn ghost" data-go="daily">Reto diario de hoy<small>'+dTown.name+' · '+dAlc.title+'. Mismos desastres para todo el mundo.</small></button>';
+    h += boardHTML();
+    h += '<button class="btn ghost" data-go="howto">'+(UI.howto?'Ocultar reglas':'Cómo se juega')+'</button>';
+    if (UI.howto) h += '<div class="card"><ul class="rules">'+
+      '<li><b>Aviso:</b> el observatorio te dice qué puede venir, con probabilidades que pueden fallar. Al final de la temporada pueden llegar dos desastres a la vez.</li>'+
+      '<li><b>Preparación:</b> 3 turnos. Cada turno repartes a tu gente entre <b>producir</b> (talar, cantera, granja, recaudar) y <b>construir</b> sobre el mapa. Cada persona tiene un oficio que la hace mejor en algo.</li>'+
+      '<li><b>Ojo:</b> talar y sacar piedra debilitan la ladera. Los diques empujan el agua río abajo. Nada es gratis.</li>'+
+      '<li><b>Impacto:</b> ves qué aguanta. Si se daña la casa de alguien de tu gente, puede acabar herido. Si le vuelve a pasar, se marcha.</li>'+
+      '<li><b>Entre desastres:</b> eliges 1 mejora de 3 y a veces pasa algo en el pueblo que te obliga a decidir.</li>'+
+      '<li>Pierdes si quedan menos de 15 vecinos, la moral llega a 0 o no queda nadie para trabajar. Toca el mapa para ver qué es cada casilla y usa el mapa de riesgo.</li></ul></div>';
+    const nT = Object.keys(TOWNS).filter(unlockedTown).length, nA = ALCALDES.filter(unlockedAlc).length;
+    h += '<div class="card" style="display:flex;flex-direction:column;gap:10px"><div class="label">Tu progreso</div><div style="font-size:14px;line-height:1.5">Pueblos: <b>'+nT+'/'+Object.keys(TOWNS).length+'</b> · Alcaldes: <b>'+nA+'/'+ALCALDES.length+'</b> · Temporadas: <b>'+PROG.seasons+'</b> · Mejor puntuación: <b>'+(PROG.best||0)+'</b></div>'+
+      '<label class="toggle"><input type="checkbox" data-test="1"'+(PROG.test?' checked':'')+'> Modo prueba: todo desbloqueado</label></div>';
+  }
+  else if (UI.screen === 'setup') {
+    h += '<div class="row"><h2 style="font-size:22px">Nueva temporada</h2><button class="x" data-go="menu" aria-label="Volver">✕</button></div>';
+    h += '<div class="label">Elige pueblo</div><div style="display:flex;flex-direction:column;gap:8px">';
+    Object.keys(TOWNS).forEach(k => { const t = TOWNS[k], ok = unlockedTown(k);
+      h += '<button class="pick-card'+(UI.town===k?' sel':'')+(ok?'':' locked')+'" '+(ok?'data-town="'+k+'"':'disabled')+'><div class="sw" style="background:'+t.color+'">'+t.name.charAt(0)+'</div><div><div class="n">'+t.name+' <span class="muted" style="font-weight:500;font-size:12px">· '+t.kind+'</span></div><div class="dd">'+(ok?t.desc:'Bloqueado: '+t.unlock.text+'.')+'</div></div></button>'; });
+    h += '</div><div class="label">Elige alcalde</div><div style="display:flex;flex-direction:column;gap:8px">';
+    ALCALDES.forEach(a => { const ok = unlockedAlc(a);
+      h += '<button class="pick-card'+(UI.alc===a.id?' sel':'')+(ok?'':' locked')+'" '+(ok?'data-alc="'+a.id+'"':'disabled')+'><div class="sw" style="background:'+a.color+'">'+a.name.charAt(0)+'</div><div><div class="n">'+a.title+' <span class="muted" style="font-weight:500;font-size:12px">· '+a.name+'</span></div><div class="dd">'+(ok?a.d:'Bloqueado: '+a.unlock.text+'.')+'</div></div></button>'; });
+    h += '</div><button class="btn" data-go="start">Empezar temporada</button>';
+  }
+  else if (G.phase === 'forecast') {
+    const f = G.fc;
+    h += headerHTML() + resHTML();
+    h += '<div class="row">'+'<div class="label">Tu pueblo</div>'+heatBtn()+'</div>';
+    h += '<div class="mapwrap'+(G.heat?'':' dim')+'">'+mapHTML('view')+'</div>' + heatLegend() + infoHTML();
+    h += '<div class="card" style="display:flex;flex-direction:column;gap:12px">';
+    h += '<div class="row"><div class="label">Parte del observatorio</div><div class="chip" style="background:#C2531F">Llega en '+G.maxTurns+' turno'+(G.maxTurns>1?'s':'')+'</div></div>';
+    h += '<h2 style="font-size:23px">'+(f.I===1?'Se acerca algo':(f.I===2?'Se acerca algo serio':'Se acerca algo muy fuerte'))+'</h2>';
+    h += forecastBars();
+    h += '<div class="muted" style="font-size:13px;line-height:1.45">Intensidad '+'●'.repeat(f.I)+'○'.repeat(3-f.I)+' · Precisión '+(['','baja: puede fallar bastante','media','alta'][f.lvl])+'.</div>';
+    if (G.alc==='meteorologa' && G.schedule[G.idx+1]) h += '<div style="font-size:13px;line-height:1.45"><b>Garazi intuye lo que vendrá después:</b> '+optName(G.schedule[G.idx+1].types)+'.</div>';
+    h += '</div>' + warnings();
+    h += '<button class="btn" data-go="prep">Empezar a preparar</button>';
+  }
+  else if (G.phase === 'prep') {
+    h += headerHTML();
+    h += '<div class="row"><h2 style="font-size:20px">Preparación</h2><div class="muted" style="font-size:13px">Turno <b style="color:#23262B">'+G.turn+'</b> de '+G.maxTurns+'</div></div>';
+    h += resHTML(production());
+    h += '<div class="row" style="font-size:12.5px;align-items:flex-start"><span><span class="muted">Previsión:</span> '+forecastOptions().map(([k,p])=>optName(k)+' '+p+'%').join(' · ')+'</span>'+heatBtn()+'</div>';
+    h += '<div class="mapwrap">'+mapHTML('prep')+'</div>' + heatLegend();
+    h += '<div class="msg">'+(G.msg||'')+'</div>' + (G.sel ? '' : infoHTML());
+    h += '<div class="label">Tu gente · toca a alguien para ver qué sabe hacer</div>' + peopleHTML();
+    h += '<div class="label">Producir · reparte a tu gente</div><div class="jobs">';
+    const free = freeWorkers().length;
+    const yields = {talar:'+2 madera c/u · ladera +4%', cantera:'+1 piedra c/u · ladera +6%', granja:'+'+(granjasOk()>=2?2:granjasOk())+' comida c/u'+(G.dryFarm?' (½ por sequía)':''), recaudar:'+15 dinero c/u · −2 moral'};
+    JOBS.forEach(([k,n]) => {
+      const who = G.alloc[k].map(id=>W(id).name).join(', ');
+      h += '<div class="job'+(G.alloc[k].length?' on':'')+(k==='talar'||k==='cantera'?' danger':'')+'"><div class="n">'+n+'</div><div class="y">'+yields[k]+'</div><div class="who">'+esc(who)+'</div><div class="step"><button class="m" data-job="'+k+'" data-d="-1" aria-label="Quitar a alguien de '+n+'"'+(G.alloc[k].length?'':' disabled')+'>−</button><b>'+G.alloc[k].length+'</b><button class="p" data-job="'+k+'" data-d="1" aria-label="Añadir a alguien a '+n+'"'+(free>0?'':' disabled')+'>+</button></div></div>';
+    });
+    h += '</div><div class="label">Construir y proteger · elige y toca el mapa</div><div class="acts">';
+    for (const k in ACTIONS) { const a = ACTIONS[k]; h += '<button class="act'+(G.sel===k?' sel':'')+'" data-act="'+k+'"><span class="n">'+a.name+'</span><span class="c">'+costLabel(a)+'</span></button>'; }
+    h += '</div>';
+    if (G.sel) h += '<div class="hint">'+ACTIONS[G.sel].desc+(G.workers.some(w=>w.of==='albanil'&&!w.gone)?' Si lo hace alguien albañil, ahorra 1 de material.':'')+'</div>';
+    h += warnings();
+    h += '<button class="btn" data-go="endturn">'+(G.turn<G.maxTurns?'Terminar turno':'Terminar y esperar el desastre')+'</button>';
+  }
+  else if (G.phase === 'impact') {
+    const types = G.fc.real, done = G.impact.shown >= G.impact.events.length;
+    h += headerHTML();
+    h += '<div class="banner" style="background:'+DIS[types[0]].color+'"><div class="label" style="color:rgba(255,255,255,.85)">Desastre '+(G.idx+1)+' · Impacto</div><h2 style="font-size:24px">¡'+types.map(k=>DIS[k].name).join(' + ')+'!</h2><div style="font-size:13px;opacity:.9">La previsión daba un '+G.fc.pReal+'% a esto.</div></div>';
+    h += '<div class="mapwrap">'+mapHTML('impact')+'</div>';
+    h += '<div class="card"><div class="log">'+G.impact.events.slice(0,G.impact.shown).map(e=>'<div class="e k-'+e.kind+'"><div class="dot"></div><div>'+e.text+'</div></div>').join('')+'</div></div>';
+    h += '<button class="btn" data-go="result"'+(done?'':' disabled')+'>'+(done?'Ver consecuencias':'…')+'</button>';
+  }
+  else if (G.phase === 'result') {
+    const r = G.res, s = G.snap;
+    const dl = (a,b) => { const v = a-b; return v ? ' <span style="font-size:13px" class="'+(v>0?'pos':'neg')+'">'+(v>0?'+':'')+v+'</span>' : ''; };
+    h += headerHTML();
+    h += '<div><div class="label" style="color:'+(G.lost?'#A8441A':'#2F6B37')+'">Desastre '+(G.idx+1)+(G.lost?' · el pueblo no aguanta':' superado')+'</div><h2 style="font-size:26px">'+town().name+(G.lost?' cae':' aguanta')+'</h2></div>';
+    h += '<div class="grid2">'+
+      '<div class="stat"><div class="k">Vecinos</div><div class="v">'+r.pop+dl(r.pop,s.pop)+'</div></div>'+
+      '<div class="stat"><div class="k">Moral</div><div class="v">'+r.moral+'%'+dl(r.moral,s.moral)+'</div></div>'+
+      '<div class="stat"><div class="k">Heridos (se recuperan)</div><div class="v">'+r.heridos+'</div></div>'+
+      '<div class="stat"><div class="k">Edificios dañados</div><div class="v">'+G.tiles.filter(t=>t.dmg).length+'</div></div>'+
+      '<div class="stat"><div class="k">Comida</div><div class="v">'+r.comida+dl(r.comida,s.comida)+'</div></div>'+
+      '<div class="stat"><div class="k">Riesgo ladera</div><div class="v">'+r.riesgo+'%'+dl(r.riesgo,s.riesgo)+'</div></div></div>';
+    if (G.lost) h += '<div class="warnline">'+G.lost+'</div><button class="btn" data-go="finish">Ver informe final</button>';
+    else if (G.idx === SEASON-1) h += '<div class="goodline">¡Has superado el último desastre de la temporada!</div><button class="btn" data-go="finish">Ver informe final</button>';
+    else {
+      h += '<h3 style="font-size:17px">Elige una mejora</h3><div style="display:flex;flex-direction:column;gap:8px">';
+      G.result.offers.forEach(p => { h += '<button class="pick-card" data-perk="'+p.id+'"><div class="sw" style="background:'+p.sw+'"></div><div><div class="n">'+p.name+'</div><div class="dd">'+p.d+'</div></div></button>'; });
+      h += '</div>';
+    }
+  }
+  else if (G.phase === 'event') {
+    const e = G.event;
+    h += headerHTML();
+    if (G.msg) h += '<div class="goodline">'+G.msg+'</div>';
+    h += '<div class="card" style="display:flex;flex-direction:column;gap:8px"><div class="label">Mientras tanto, en el pueblo…</div><h2 style="font-size:22px">'+e.t+'</h2><div style="font-size:14.5px;line-height:1.5">'+esc(e.x)+'</div></div>';
+    h += resHTML();
+    h += '<div style="display:flex;flex-direction:column;gap:8px">'+e.opts.filter(o => !o.ok || o.ok()).map((o,k)=>'<button class="ev-opt" data-ev="'+k+'"><div class="n">'+o.l+'</div><div class="dd">'+esc(o.d)+'</div></button>').join('')+'</div>';
+  }
+  else if (G.phase === 'end') {
+    const won = !G.lost, hist = G.stats.hist;
+    h += '<div style="display:flex;flex-direction:column;gap:6px;margin-top:8px"><div class="label">Fin de la temporada'+(G.daily?' · Reto diario':'')+'</div><h1 style="font-size:30px">'+(won?'¡'+town().name+' ha sobrevivido!':town().name+' no ha aguantado')+'</h1><div class="muted" style="font-size:15px">'+(won?'Has superado los '+SEASON+' desastres.':'Has llegado hasta el desastre '+(G.idx+1)+' de '+SEASON+'.')+'</div></div>';
+    h += '<div class="card row"><div><div class="label">Puntuación</div><div style="font-family:Rubik,sans-serif;font-weight:700;font-size:34px">'+G.final+'</div></div><div style="text-align:right;font-size:13px" class="muted">'+(G.record?'<b style="color:#2F6B37">¡Nuevo récord!</b>':'Récord: '+PROG.best)+'</div></div>';
+    if (G.unlocked && G.unlocked.length) h += '<div class="goodline"><b>Has desbloqueado:</b> '+G.unlocked.join(' · ')+'</div>';
+    if (G.daily) { h += G.submitted ? '<div class="goodline">Tu puntuación está en el ranking de hoy.</div>' : (G.submitFail ? '<div class="warnline">No se ha podido guardar tu puntuación en el ranking.</div>' : ''); h += boardHTML(); }
+    const pops = [G.stats.startPop||40].concat(hist.map(x=>x.pop)), morals = [G.stats.startMoral||70].concat(hist.map(x=>x.moral));
+    h += '<div class="card chart"><div class="label" style="margin-bottom:6px">Vecinos a lo largo de la temporada</div>'+lineChart(pops, '#2A62A0', 'Vecinos', 50)+'</div>';
+    h += '<div class="card chart"><div class="label" style="margin-bottom:6px">Moral a lo largo de la temporada</div>'+lineChart(morals, '#7A5A9E', 'Moral', 100)+'</div>';
+    h += '<div class="card chart"><div class="label" style="margin-bottom:6px">Edificios dañados en cada desastre</div>'+barChart(hist.map(x=>x.dmg))+'<div class="muted" style="font-size:12px;margin-top:6px">'+hist.map(x=>x.n+': '+x.types.map(k=>DIS[k].name).join(' + ')).join(' · ')+'</div></div>';
+    const tc = topOf(G.stats.cause), ts = topOf(G.stats.saves), tb = topOf(G.stats.builds);
+    h += '<div class="grid2">'+
+      '<div class="stat"><div class="k">Lo que más daño te hizo</div><div style="font-weight:600;font-size:14px;margin-top:2px">'+(tc?cap(CAUSE_NAME[tc[0]])+' ('+tc[1]+')':'Nada')+'</div></div>'+
+      '<div class="stat"><div class="k">Lo que más te salvó</div><div style="font-weight:600;font-size:14px;margin-top:2px">'+(ts?cap(SAVE_NAME[ts[0]])+' ('+ts[1]+')':'La suerte')+'</div></div>'+
+      '<div class="stat"><div class="k">Lo que más construiste</div><div style="font-weight:600;font-size:14px;margin-top:2px">'+(tb?tb[0]+' ('+tb[1]+')':'Nada')+'</div></div>'+
+      '<div class="stat"><div class="k">Tu gente</div><div style="font-weight:600;font-size:14px;margin-top:2px">'+aliveWorkers().length+' siguen · '+G.workers.filter(w=>w.gone).length+' se fueron</div></div></div>';
+    h += '<div class="mapwrap">'+mapHTML('view')+'</div>' + infoHTML();
+    if (G.chosen.length) h += '<div class="card"><div class="label" style="margin-bottom:6px">Mejoras elegidas</div><div style="font-size:14px;line-height:1.5">'+G.chosen.join(' · ')+'</div></div>';
+    h += '<button class="btn" data-go="menu">Volver al menú</button>';
+  }
+  app.innerHTML = h;
+}
+
+document.getElementById('app').addEventListener('change', (e) => {
+  if (e.target.dataset && e.target.dataset.test) { PROG.test = e.target.checked; saveProg(); render(); }
+});
+document.getElementById('app').addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b || b.disabled) return;
+  const top = () => window.scrollTo(0,0);
+  if (b.dataset.go) {
+    const g = b.dataset.go;
+    if (g === 'setup') { UI.screen = 'setup'; if (!unlockedTown(UI.town)) UI.town='villarrio'; top(); return render(); }
+    if (g === 'menu') { UI.screen = 'menu'; G = null; clearInterval(timer); top(); return render(); }
+    if (g === 'howto') { UI.howto = !UI.howto; return render(); }
+    if (g === 'start') { newGame({town:UI.town, alc:UI.alc}); G.stats.startPop = 40; G.stats.startMoral = 70; UI.screen = 'game'; top(); return render(); }
+    if (g === 'daily') { newGame({daily:todayKey()}); G.stats.startPop = 40; G.stats.startMoral = 70; UI.screen = 'game'; top(); return render(); }
+    if (g === 'prep') { G.phase = 'prep'; G.msg = ''; top(); return render(); }
+    if (g === 'endturn') return endTurn();
+    if (g === 'result') { top(); return toResult(); }
+    if (g === 'finish') { top(); return finish(); }
+    return;
+  }
+  if (b.dataset.town) { UI.town = b.dataset.town; return render(); }
+  if (b.dataset.alc) { UI.alc = b.dataset.alc; return render(); }
+  if (b.dataset.heat) { G.heat = !G.heat; return render(); }
+  if (b.dataset.job) return changeJob(b.dataset.job, +b.dataset.d);
+  if (b.dataset.act) { G.sel = G.sel === b.dataset.act ? null : b.dataset.act; G.msg = ''; return render(); }
+  if (b.dataset.person) { const w = W(b.dataset.person); G.msg = w.name+' · '+ofName(w)+': '+OFICIOS[w.of].d; G.insp = w.home; return render(); }
+  if (b.dataset.tile) {
+    const i = +b.dataset.tile;
+    if (G.phase === 'prep' && G.sel) {
+      if (ACTIONS[G.sel].valid(T(i), i)) return doAction(i);
+      G.msg = 'Aquí no se puede: '+ACTIONS[G.sel].name.toLowerCase()+'.'; G.sel = null; G.insp = i; return render();
+    }
+    G.insp = G.insp === i ? null : i; return render();
+  }
+  if (b.dataset.close) { G.insp = null; return render(); }
+  if (b.dataset.doat) { G.sel = b.dataset.doat; doAction(G.insp); G.sel = null; return render(); }
+  if (b.dataset.perk) { top(); return choosePerk(b.dataset.perk); }
+  if (b.dataset.ev) { top(); return chooseEvent(+b.dataset.ev); }
+});
+
+render();
+initCaps();
+})();
+</script>
+</body>
+</html>
