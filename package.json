@@ -2,8 +2,11 @@
   "name": "disaster",
   "private": true,
   "license": "UNLICENSED",
+  "type": "module",
   "description": "Atajos. El juego no tiene dependencias: npm install no hace falta.",
   "scripts": {
+    "test": "node tests/ejecutar.mjs",
+    "simular": "node tools/simular.mjs",
     "serve": "python3 -m http.server 8765"
   }
 }

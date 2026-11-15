@@ -1,0 +1,443 @@
+{
+  "casillas": {
+    "B": {"nombre": "Bosque", "que": "Árboles. Si pones gente a talar, sacas madera de aquí. Los árboles sujetan la tierra y frenan los aludes."},
+    "X": {"nombre": "Claro talado", "que": "Bosque cortado. El fuego no pasa por aquí: funciona como cortafuegos. Pero ya no frena aludes."},
+    "Q": {"nombre": "Bosque quemado", "que": "Lo que queda tras un incendio. Ya no arde, pero sin raíces la tierra se sujeta peor."},
+    "L": {"nombre": "Ladera", "que": "Pendiente de tierra y roca. De aquí sale la piedra de la cantera. Si se debilita mucho, puede deslizarse."},
+    "P": {"nombre": "Prado", "que": "Campo abierto. Aquí puedes construir el observatorio o el aljibe."},
+    "R": {"nombre": "Río", "que": "Tramo del río. En las riadas el agua se sale hacia las casillas de al lado."},
+    "M": {"nombre": "Mar", "que": "En los temporales las olas inundan las casillas de la costa. Puedes poner una escollera para frenarlas."},
+    "S": {"nombre": "Nevero", "que": "Nieve acumulada en la cumbre. Puede soltar un alud que baja por su columna hasta chocar con bosque, un muro o un edificio."},
+    "C": {"nombre": "Casa", "que": "Aquí viven varias familias. Si se daña, hay heridos, alguna familia se marcha y baja la moral."},
+    "A": {"nombre": "Ayuntamiento", "que": "El centro del pueblo. Aquí se recauda. Si se queda sin luz, tienes un turno menos para prepararte y no sirve de refugio en olas de calor."},
+    "G": {"nombre": "Granja", "que": "Produce la comida que necesita el pueblo después de cada desastre."},
+    "O": {"nombre": "Observatorio", "que": "Mejora la precisión de la previsión mientras no esté dañado."},
+    "W": {"nombre": "Aljibe", "que": "Reserva de agua. En las sequías se pierde la mitad y las granjas siguen produciendo."}
+  },
+
+  "nombres": {
+    "casaDe": "la casa de {nombre}",
+    "C": "una casa",
+    "A": "el ayuntamiento",
+    "G": "una granja",
+    "O": "el observatorio",
+    "W": "el aljibe",
+    "otra": "una casilla"
+  },
+
+  "pueblos": {
+    "villarrio": {"nombre": "Villarrío", "tipo": "Valle con río", "desc": "Un pueblo tranquilo junto al río. Riadas, incendios, tormentas y alguna sequía."},
+    "arrieta": {"nombre": "Arrieta", "tipo": "Costa", "desc": "Pueblo pesquero. Los temporales del mar golpean las casas del puerto.", "desbloqueo": "Gana una temporada en Villarrío"},
+    "altuzarra": {"nombre": "Altuzarra", "tipo": "Alta montaña", "desc": "Entre neveros y laderas. Los aludes bajan por las columnas hasta que algo los para.", "desbloqueo": "Llega al desastre 6 en Arrieta"},
+    "errekalde": {"nombre": "Errekalde", "tipo": "Ría", "desc": "Casas a los dos lados de una ría ancha que desemboca en el mar. Riadas muy duras.", "desbloqueo": "Gana una temporada en Altuzarra"}
+  },
+
+  "desastres": {
+    "riada": {"nombre": "Riada", "aviso": "Lluvias intensas"},
+    "incendio": {"nombre": "Incendio forestal", "aviso": "Calor y viento seco"},
+    "tormenta": {"nombre": "Tormenta eléctrica", "aviso": "Tormenta eléctrica"},
+    "sequia": {"nombre": "Sequía", "aviso": "Semanas sin llover"},
+    "ola": {"nombre": "Ola de calor", "aviso": "Temperaturas extremas"},
+    "plaga": {"nombre": "Plaga", "aviso": "Plaga en los cultivos"},
+    "temporal": {"nombre": "Temporal marítimo", "aviso": "Temporal en el mar"},
+    "alud": {"nombre": "Alud", "aviso": "Nevadas fuertes"}
+  },
+
+  "alcaldes": {
+    "ingeniera": {"nombre": "Begoña", "titulo": "La ingeniera", "desc": "Diques, escolleras y muros cuestan 1 piedra menos. Empieza con +3 piedra."},
+    "agricultor": {"nombre": "Patxi", "titulo": "El agricultor", "desc": "Cada persona en la granja da +2 comida. Empieza con +8 comida. Las plagas hacen la mitad de daño."},
+    "meteorologa": {"nombre": "Garazi", "titulo": "La meteoróloga", "desc": "Previsión un nivel más precisa, y ves qué viene en el desastre siguiente.", "desbloqueo": "Supera 10 desastres en total"},
+    "tesorero": {"nombre": "Txomin", "titulo": "El tesorero", "desc": "Empieza con +40 de dinero. Recaudar da +5 más y solo baja 1 de moral.", "desbloqueo": "Gana una temporada"},
+    "enfermera": {"nombre": "Arantxa", "titulo": "La enfermera", "desc": "Los vecinos heridos vuelven tras un turno. Los daños en casas causan 1 herido menos.", "desbloqueo": "Termina 3 temporadas"}
+  },
+
+  "oficios": {
+    "lenador": {"m": "leñador", "f": "leñadora", "desc": "+2 madera extra al talar."},
+    "cantero": {"m": "cantero", "f": "cantera", "desc": "+1 piedra extra y debilita menos la ladera."},
+    "agricultor": {"m": "agricultor", "f": "agricultora", "desc": "+2 comida extra en la granja. Si ha trabajado en la granja, las plagas hacen menos daño."},
+    "albanil": {"m": "albañil", "f": "albañil", "desc": "Cuando construye, la obra cuesta 1 material menos."},
+    "comerciante": {"m": "comerciante", "f": "comerciante", "desc": "+10 dinero extra al recaudar y casi no baja la moral."},
+    "bombero": {"m": "bombero", "f": "bombera", "desc": "Mientras esté sano, el fuego se propaga menos."},
+    "medico": {"m": "médico", "f": "médica", "desc": "Mientras esté sano, los daños causan menos heridos."},
+    "peon": {"m": "sin oficio", "f": "sin oficio", "desc": "Hace de todo, sin bonificación."}
+  },
+
+  "trabajos": {"talar": "Talar", "cantera": "Cantera", "granja": "Granja", "recaudar": "Recaudar"},
+  "trabajando": {"talar": "talando", "cantera": "en la cantera", "granja": "en la granja", "recaudar": "recaudando"},
+  "causas": {"agua": "las riadas", "mar": "el mar", "fuego": "el fuego", "rayo": "los rayos", "tierra": "los deslizamientos", "nieve": "los aludes", "hambre": "el hambre", "calor": "el calor"},
+  "salvaciones": {"dique": "los diques", "escollera": "las escolleras", "sacos": "los sacos", "pararrayos": "los pararrayos", "cortafuegos": "los cortafuegos", "muro": "los muros", "bosque": "el bosque, frenando aludes", "evacuar": "las evacuaciones", "refugio": "el refugio del ayuntamiento", "aljibe": "el aljibe"},
+  "recursos": {"dinero": "dinero", "madera": "madera", "piedra": "piedra", "comida": "comida"},
+
+  "construcciones": {
+    "dique": "Dique", "escollera": "Escollera", "sacos": "Sacos", "cortafuegos": "Cortafuegos", "pararrayos": "Pararrayos",
+    "muro": "Muro", "evacuar": "Evacuar", "reparar": "Reparar", "observatorio": "Observatorio", "aljibe": "Aljibe"
+  },
+  "acciones": {
+    "dique": {"nombre": "Dique / escollera", "desc": "Toca un tramo de río (dique) o de mar (escollera). Frena el agua ahí, pero en el río la empuja río abajo."},
+    "sacos": {"nombre": "Sacos", "desc": "Toca un edificio. Lo protege de una inundación (los sacos se gastan)."},
+    "cortafuegos": {"nombre": "Cortafuegos", "desc": "Toca un bosque. Lo tala: el fuego no pasa por ahí y ganas +2 madera, pero la tierra se sujeta peor (+5% riesgo de ladera)."},
+    "pararrayos": {"nombre": "Pararrayos", "desc": "Toca un edificio. Protege de rayos esa casilla y las de alrededor."},
+    "muro": {"nombre": "Muro", "desc": "Toca una ladera o un nevero. Ladera: −15% de riesgo de deslizamiento. Nevero: frena los aludes que salen o pasan por ahí."},
+    "evacuar": {"nombre": "Evacuar", "desc": "Toca una casa. Si le pasa algo en este desastre, nadie resulta herido."},
+    "reparar": {"nombre": "Reparar", "desc": "Toca un edificio dañado para arreglarlo."},
+    "observatorio": {"nombre": "Observatorio", "desc": "Toca un prado. Mejora la previsión de los próximos desastres. Solo puedes tener uno."},
+    "aljibe": {"nombre": "Aljibe", "desc": "Toca un prado. Reserva de agua: en las sequías se pierde la mitad y las granjas siguen produciendo. Solo uno."}
+  },
+
+  "mejoras": {
+    "voluntarios": {"nombre": "Voluntarios del monte", "desc": "Llega una persona nueva al pueblo para trabajar."},
+    "radar": {"nombre": "Radar meteorológico", "desc": "La previsión es más precisa."},
+    "bomba": {"nombre": "Bombas de achique", "desc": "En riadas y temporales se inundan menos casillas."},
+    "bomberos": {"nombre": "Brigada de bomberos", "desc": "El fuego se propaga bastante menos."},
+    "carpinteros": {"nombre": "Serrería", "desc": "+1 madera por cada persona que tala."},
+    "muros": {"nombre": "Cantería", "desc": "Los diques y escolleras cuestan 1 piedra menos."},
+    "ayuda": {"nombre": "Ayuda de la diputación", "desc": "+50 de dinero ahora."},
+    "fiesta": {"nombre": "Romería", "desc": "+20 de moral ahora."},
+    "silos": {"nombre": "Silos llenos", "desc": "+10 de comida ahora."},
+    "obras": {"nombre": "Brigada de obras", "desc": "Repara gratis todos los edificios dañados."},
+    "reforestar": {"nombre": "Repoblación", "desc": "Los bosques quemados vuelven a crecer y la ladera se recupera (−15% riesgo)."}
+  },
+
+  "eventos": {
+    "constructor": {"titulo": "Un constructor ambulante", "texto": "Ofrece hacer diques y escolleras muy baratos durante la próxima preparación. Pero no garantiza que aguanten.",
+      "aceptar": {"l": "Aceptar", "d": "Diques y escolleras a 1 piedra, pero cada uno puede ceder (35%)."},
+      "no": {"l": "No, gracias", "d": "Nada cambia."}},
+    "fiestas": {"titulo": "Las fiestas del pueblo", "texto": "Los vecinos quieren celebrar que {pueblo} sigue en pie.",
+      "celebrar": {"l": "Celebrarlas", "d": "+15 de moral, pero un turno menos de preparación."},
+      "no": {"l": "No es momento", "d": "−5 de moral."}},
+    "refugiados": {"titulo": "Una familia sin hogar", "texto": "Una familia de un pueblo cercano lo ha perdido todo y pide quedarse.",
+      "acoger": {"l": "Acogerla", "d": "+4 vecinos y una persona más para trabajar. −6 de comida."},
+      "no": {"l": "No podemos", "d": "−8 de moral."}},
+    "mercado": {"titulo": "Día de mercado", "texto": "Pasan comerciantes de la comarca con piedra, comida y ganas de comprar madera.",
+      "piedra": {"l": "Comprar piedra", "d": "+4 piedra por 25 de dinero."},
+      "comida": {"l": "Comprar comida", "d": "+6 comida por 20 de dinero."},
+      "madera": {"l": "Vender madera", "d": "−4 madera, +30 de dinero."},
+      "nada": {"l": "No comprar nada", "d": "Nada cambia."}},
+    "bosqueviejo": {"titulo": "El bosque viejo", "texto": "Un aserradero ofrece dinero por talar uno de los bosques más antiguos del pueblo.",
+      "vender": {"l": "Venderlo", "d": "+40 de dinero y +3 madera. Se tala un bosque (+8% riesgo de ladera)."},
+      "proteger": {"l": "Protegerlo", "d": "+5 de moral."}},
+    "periodista": {"titulo": "Sales en las noticias", "texto": "Una televisión cuenta lo que le ha pasado a tu pueblo. Hay gente que quiere ayudar.",
+      "entrevista": {"l": "Dar una entrevista", "d": "+35 de dinero en donaciones."},
+      "no": {"l": "Mejor no", "d": "+4 de moral: los vecinos agradecen la discreción."}},
+    "hospital": {"titulo": "Un herido grave", "texto": "{nombre} ({oficio}) sigue herid{a}. En el hospital de la ciudad se recuperaría enseguida.",
+      "llevar": {"l": "Llevarl{a} al hospital", "d": "Vuelve a trabajar ya. −20 de dinero."},
+      "quedar": {"l": "Que se recupere aquí", "d": "Se pierde la próxima preparación."}},
+    "miedo": {"titulo": "Alguien quiere irse", "texto": "{nombre} ({oficio}) tiene miedo y quiere marcharse del pueblo.",
+      "convencer": {"l": "Convencerl{a}", "d": "−15 de dinero para arreglarle la casa. Se queda."},
+      "irse": {"l": "Dejarl{a} ir", "d": "Pierdes a {nombre}. +3 de comida (una boca menos)."}},
+    "montaneros": {"titulo": "Montañeros voluntarios", "texto": "Un grupo de montañeros se ofrece a echar una mano durante el próximo desastre.",
+      "aceptar": {"l": "Aceptar", "d": "+2 personas solo para la próxima preparación. −3 de comida."},
+      "no": {"l": "No hace falta", "d": "Nada cambia."}},
+    "subvencion": {"titulo": "Una subvención", "texto": "La diputación da dinero para prevención, pero hay que rellenar mucho papeleo.",
+      "pedir": {"l": "Pedirla", "d": "+50 de dinero, pero alguien pierde el primer turno haciendo papeleo."},
+      "no": {"l": "Demasiado papeleo", "d": "Nada cambia."}}
+  },
+
+  "msg": {
+    "sinGente": "No te queda gente libre este turno. Quita a alguien de producir.",
+    "albanil": "{nombre} (albañil) ahorra 1 de {material}.",
+    "falta": "Te falta {recurso} ({n} necesario).",
+    "hecho": "{obra} hecho por {quien}.",
+    "aquiNo": "Aquí no se puede: {accion}.",
+    "persona": "{nombre} · {oficio}: {desc}",
+    "seUne": "{nombre} ({oficio}) se une al pueblo.",
+    "produccion": {
+      "madera": "+{n} madera", "piedra": "+{n} piedra", "comida": "+{n} comida", "dinero": "+{n} dinero",
+      "total": "Producción del turno: {lista}."
+    }
+  },
+
+  "log": {
+    "sacos": "Los sacos salvan {lugar}.",
+    "evacuada": "{lugar} queda dañada, pero estaba evacuada: nadie herido.",
+    "danada": "queda dañada",
+    "enRuinas": "queda en ruinas",
+    "heridosY": "{n} herido{s} y ",
+    "casaDanada": "{lugar} {estado}: {heridos}una familia se marcha.",
+    "medicoEvita": "La atención médica evita que {nombre} acabe herid{a}.",
+    "heridoOtraVez": "{nombre} ({oficio}) vuelve a resultar herid{a} y se marcha del pueblo.",
+    "heridoCasa": "{nombre} ({oficio}), que vive ahí, resulta herid{a}: no podrá trabajar en la próxima preparación.",
+    "aytoSinLuz": "El ayuntamiento se queda sin luz: un turno menos de preparación hasta repararlo, y no sirve de refugio en las olas de calor.",
+    "granjaDanada": "Una granja queda dañada: dará menos comida hasta repararla.",
+    "aljibeDanado": "El aljibe se agrieta: no te protegerá de la sequía hasta repararlo.",
+    "obsDanado": "El observatorio queda dañado: la previsión pierde precisión.",
+    "diqueCede1": "Un dique barato cede. El constructor ambulante ya se ha ido…",
+    "diqueCedeN": "Ceden {n} diques baratos. El constructor ambulante ya se ha ido…",
+    "dique1": "El dique aguanta, pero empujan el agua río abajo.",
+    "diqueN": "Los {n} diques aguantan, pero empujan el agua río abajo.",
+    "escollera1": "La escollera aguanta las olas.",
+    "escolleraN": "Las {n} escolleras aguantan las olas.",
+    "inundaRio": "El agua se sale del cauce en {n} casilla{s}.",
+    "inundaMar": "Las olas entran en {n} casilla{s}.",
+    "noInundaRio": "El río no llega a desbordarse.",
+    "noInundaMar": "El mar no consigue entrar en el pueblo.",
+    "riada": "¡Riada! El río baja con fuerza.",
+    "temporal": "¡Temporal! Olas enormes golpean la costa.",
+    "incendio": "¡Incendio forestal! El fuego prende en el bosque.",
+    "incendioSeco": "¡Incendio forestal! Con la tierra tan seca, prende enseguida.",
+    "bombero": "{nombre} ({oficio}) organiza a los vecinos para contener las llamas.",
+    "llamas": "Las llamas se extienden por {n} casillas.",
+    "cortafuegos": "Los cortafuegos frenan el avance del fuego.",
+    "sinArboles": "Sin árboles, la tierra se sujeta peor: +{n}% de riesgo de deslizamiento.",
+    "tormenta": "¡Tormenta eléctrica! Empiezan a caer rayos.",
+    "pararrayos": "Un pararrayos desvía el rayo que iba a {lugar}.",
+    "rayo": "Cae un rayo sobre {lugar}.",
+    "alud": "¡Alud! La nieve acumulada se suelta de las cumbres.",
+    "muroNevero": "El muro del nevero retiene la nieve.",
+    "muroMedio": "Un muro frena el alud a mitad de camino.",
+    "muroLadera": "Un muro de la ladera frena el alud.",
+    "aludBosque": "El bosque frena el alud antes de que llegue a las casas.",
+    "aludLlega": "El alud baja la ladera y llega a {lugar}.",
+    "aludValle": "Un alud baja hasta el valle sin tocar ningún edificio.",
+    "aludAguanta": "La nieve aguanta en su sitio. Por esta vez.",
+    "sequia": "¡Sequía! Semanas sin una gota de agua.",
+    "aljibe": "El aljibe da agua al pueblo: se pierde la mitad.",
+    "comidaPerdida": "Se echan a perder {n} de comida.",
+    "sinReservas": "No había reservas suficientes: la moral cae 8.",
+    "camposSecos": "Los campos se secan: las granjas darán la mitad en la próxima preparación.",
+    "tierraSeca": "La tierra queda seca: el próximo incendio será peor.",
+    "ola": "¡Ola de calor! Temperaturas que no se recuerdan.",
+    "refugio": "El ayuntamiento abre como refugio fresco.",
+    "sinRefugio": "Sin luz en el ayuntamiento no hay refugio fresco: más gente lo pasa mal.",
+    "golpesCalor": "{n} vecino{s} con golpe de calor.",
+    "golpeVecino": "{nombre} ({oficio}) sufre un golpe de calor y no podrá trabajar en la próxima preparación.",
+    "todoSeco": "Todo queda muy seco: el próximo incendio será peor.",
+    "plaga": "¡Plaga! Los insectos arrasan los cultivos y la despensa.",
+    "plagaAgricultor": "Quien sabe de cultivos estaba en la granja y frena la plaga a tiempo.",
+    "plagaAlcalde": "La experiencia del alcalde en el campo reduce las pérdidas.",
+    "plagaPierde": "Se pierden {n} de comida.",
+    "deslizamiento": "¡Deslizamiento de tierra en la ladera!",
+    "laderaCruje": "La ladera cruje, pero aguanta… por ahora.",
+    "consume": "El pueblo consume {n} de comida y se sobrepone (+1 moral).",
+    "hambre": "No hay comida para todos: la moral cae 15.",
+    "alivio": "Ningún edificio dañado. El pueblo respira aliviado (+5 moral)."
+  },
+
+  "riesgos": {
+    "B1": "Incendio: arde muy fácil y propaga el fuego.",
+    "B2": "Si se quema o se tala, la tierra se sujeta peor y deja pasar aludes.",
+    "P": "Incendio: puede arder y pasar el fuego a casillas vecinas.",
+    "L1": "Deslizamiento: el riesgo está en {n}%. Sube al talar, sacar piedra o perder bosque. Con lluvia es más probable.",
+    "L2": "Si se desliza, arrastra lo que hay justo debajo.",
+    "S1": "Alud: con nevadas puede soltarse y bajar por esta columna.",
+    "S2muro": "Tiene muro: retiene la nieve.",
+    "S2": "Un muro aquí retiene la nieve.",
+    "R": "Riada: puede inundar las casillas de al lado.",
+    "Rtramo": "Tramo {pos} de {total} (de arriba abajo). Un dique río arriba empuja más agua hacia aquí.",
+    "M": "Temporal: las olas pueden entrar en las casillas de al lado.",
+    "cercaRio": "Riada: está junto al río.",
+    "cercaMar": "Temporal: está junto al mar.",
+    "cercaFuego": "Incendio: tiene bosque o prado al lado.",
+    "bajoLadera": "Deslizamiento: está justo debajo de la ladera.",
+    "cercaAlud": "Alud: hay un nevero arriba en esta columna.",
+    "rayoProtegido": "Rayos: protegido por un pararrayos cercano.",
+    "rayoRiesgo": "Rayos: en una tormenta le puede caer uno.",
+    "noArde": "Ya no puede arder."
+  },
+
+  "estado": {
+    "danado": "Dañado",
+    "escollera": "Con escollera",
+    "dique": "Con dique",
+    "diqueBarato": "Con dique (barato)",
+    "sacos": "Con sacos",
+    "pararrayos": "Con pararrayos",
+    "muro": "Con muro",
+    "evacuada": "Evacuada",
+    "trabajando": "{n} trabajando",
+    "viven": "Viven: {nombres}"
+  },
+
+  "fin": {
+    "vacio": "Se han marchado demasiados vecinos: {pueblo} se queda vacío.",
+    "moral": "La moral se ha hundido: los vecinos abandonan el pueblo.",
+    "nadie": "No queda nadie que pueda trabajar en el pueblo.",
+    "desbloqueoPueblo": "Pueblo: {nombre}",
+    "desbloqueoAlcalde": "Alcalde: {titulo} ({nombre})"
+  },
+
+  "ui": {
+    "titulo": "Villarrío",
+    "vecino": "Vecino {n}",
+    "unaPersona": "{n} persona",
+    "variasPersonas": "{n} personas",
+    "y": " y ",
+    "botonMenu": "Menú",
+    "pueblo": "Tu pueblo",
+    "combinado": "combinado",
+    "desastreDe": "Desastre {n} de {total}",
+    "suf": {"reto": " · Reto diario"},
+
+    "menu": {
+      "prototipo": "Prototipo jugable",
+      "subtitulo": "Haz que tu pueblo sobreviva a una temporada de {n} desastres.",
+      "nueva": "Nueva temporada",
+      "nuevaSub": "Elige pueblo y alcalde",
+      "reto": "Reto diario de hoy",
+      "retoSub": "{pueblo} · {alcalde}. Mismos desastres para todo el mundo.",
+      "comoSeJuega": "Cómo se juega",
+      "ocultarReglas": "Ocultar reglas",
+      "progreso": "Tu progreso",
+      "progresoDatos": "Pueblos: <b>{pueblos}/{pueblosTotal}</b> · Alcaldes: <b>{alcaldes}/{alcaldesTotal}</b> · Temporadas: <b>{temporadas}</b> · Mejor puntuación: <b>{mejor}</b>",
+      "modoPrueba": "Modo prueba: todo desbloqueado"
+    },
+    "reglas": {
+      "aviso": "<b>Aviso:</b> el observatorio te dice qué puede venir, con probabilidades que pueden fallar. Al final de la temporada pueden llegar dos desastres a la vez.",
+      "prep": "<b>Preparación:</b> 3 turnos. Cada turno repartes a tu gente entre <b>producir</b> (talar, cantera, granja, recaudar) y <b>construir</b> sobre el mapa. Cada persona tiene un oficio que la hace mejor en algo.",
+      "ojo": "<b>Ojo:</b> talar y sacar piedra debilitan la ladera. Los diques empujan el agua río abajo. Nada es gratis.",
+      "impacto": "<b>Impacto:</b> ves qué aguanta. Si se daña la casa de alguien de tu gente, puede acabar herido. Si le vuelve a pasar, se marcha.",
+      "entre": "<b>Entre desastres:</b> eliges 1 mejora de 3 y a veces pasa algo en el pueblo que te obliga a decidir.",
+      "pierdes": "Pierdes si quedan menos de 15 vecinos, la moral llega a 0 o no queda nadie para trabajar. Toca el mapa para ver qué es cada casilla y usa el mapa de riesgo."
+    },
+    "ranking": {
+      "titulo": "Ranking del reto de hoy",
+      "cargando": "Cargando…",
+      "error": "No se ha podido cargar el ranking ahora mismo.",
+      "vacio": "Nadie ha jugado el reto de hoy todavía. ¡Sé el primero!",
+      "alguien": "Alguien",
+      "gano": "ganó",
+      "desastre": "desastre {n}"
+    },
+    "setup": {
+      "volver": "Volver",
+      "pueblo": "Elige pueblo",
+      "alcalde": "Elige alcalde",
+      "bloqueado": "Bloqueado: {cond}.",
+      "empezar": "Empezar temporada"
+    },
+    "res": {
+      "vecinos": "Vecinos",
+      "her": "{n} her.",
+      "moral": "Moral",
+      "dinero": "Dinero",
+      "libre": "Gente libre",
+      "madera": "Madera",
+      "piedra": "Piedra",
+      "comida": "Comida",
+      "riesgo": "Riesgo ladera"
+    },
+    "warn": {
+      "ayto": "El ayuntamiento sigue sin luz: un turno menos para prepararte.",
+      "danados": "Tienes {n} edificio{s} dañado{s}. Puedes repararlos con madera.",
+      "ladera": "La ladera está inestable ({n}%). Lo que hay debajo corre peligro.",
+      "comida": "No tienes comida suficiente para después del desastre.",
+      "seca": "La tierra está seca: si hay incendio, será peor.",
+      "granjas": "Tras la sequía, las granjas dan la mitad en esta preparación.",
+      "constructor": "El constructor ambulante está aquí: diques y escolleras a 1 piedra (pueden ceder).",
+      "heridos": "Herid{a}: {nombres} (no trabajan en esta preparación).",
+      "heridosEnfermera": "Herid{a}: {nombres} (vuelven en el turno 2).",
+      "desanimado": "{nombre} está desanimad{a} por la baja moral y no trabajará en esta preparación."
+    },
+    "riesgo": {
+      "ver": "Ver mapa de riesgo",
+      "ocultar": "Ocultar riesgo",
+      "leyenda": "El % es la probabilidad estimada de que cada edificio sufra daños en el próximo desastre, según la previsión. Sequía, ola de calor y plaga no dañan edificios."
+    },
+    "persona": {
+      "ido": "se ha ido",
+      "herido": "herid{a}",
+      "desanimado": "desanimad{a}",
+      "papeleo": "papeleo",
+      "construyendo": "construyendo",
+      "libre": "libre",
+      "temporal": " (temporal)"
+    },
+    "mapa": {"accionAqui": "{accion} en esta casilla"},
+    "ficha": {
+      "toca": "Toca cualquier casilla del mapa para ver qué es.",
+      "cerrar": "Cerrar ficha",
+      "riesgo": "Riesgo de daño en el próximo desastre: {n}%",
+      "segunPrevision": "(según la previsión)",
+      "quePuedes": "Qué puedes hacer",
+      "enPreparacion": "— en la preparación",
+      "quePasar": "Qué le puede pasar",
+      "trabajo": {
+        "B": "Talar (producción): da madera.",
+        "L": "Cantera (producción): da piedra.",
+        "G": "Granja (producción): da comida.",
+        "A": "Recaudar (producción): da dinero."
+      }
+    },
+    "parte": {
+      "titulo": "Parte del observatorio",
+      "llegaEn": "Llega en {n} turno{s}",
+      "aviso": {"1": "Se acerca algo", "2": "Se acerca algo serio", "3": "Se acerca algo muy fuerte"},
+      "intensidad": "Intensidad {puntos} · Precisión {precision}.",
+      "precision": {"1": "baja: puede fallar bastante", "2": "media", "3": "alta"},
+      "intuye": "<b>{nombre} intuye lo que vendrá después:</b> {que}.",
+      "empezar": "Empezar a preparar"
+    },
+    "prep": {
+      "titulo": "Preparación",
+      "turno": "Turno <b style=\"color:#23262B\">{n}</b> de {total}",
+      "prevision": "Previsión:",
+      "tuGente": "Tu gente · toca a alguien para ver qué sabe hacer",
+      "producir": "Producir · reparte a tu gente",
+      "rinde": {
+        "talar": "+2 madera c/u · ladera +4%",
+        "cantera": "+1 piedra c/u · ladera +6%",
+        "granja": "+{n} comida c/u{sequia}",
+        "sequia": " (½ por sequía)",
+        "recaudar": "+15 dinero c/u · −2 moral"
+      },
+      "quitar": "Quitar a alguien de {trabajo}",
+      "anadir": "Añadir a alguien a {trabajo}",
+      "construir": "Construir y proteger · elige y toca el mapa",
+      "albanil": "Si lo hace alguien albañil, ahorra 1 de material.",
+      "terminarTurno": "Terminar turno",
+      "terminarEsperar": "Terminar y esperar el desastre"
+    },
+    "impacto": {
+      "titulo": "Desastre {n} · Impacto",
+      "nombre": "¡{lista}!",
+      "previsto": "La previsión daba un {p}% a esto.",
+      "ver": "Ver consecuencias",
+      "espera": "…"
+    },
+    "resultado": {
+      "superado": "Desastre {n} superado",
+      "cae": "Desastre {n} · el pueblo no aguanta",
+      "aguantaTitulo": "{pueblo} aguanta",
+      "caeTitulo": "{pueblo} cae",
+      "heridos": "Heridos (se recuperan)",
+      "danados": "Edificios dañados",
+      "informe": "Ver informe final",
+      "ultimo": "¡Has superado el último desastre de la temporada!",
+      "eligeMejora": "Elige una mejora"
+    },
+    "evento": {"mientras": "Mientras tanto, en el pueblo…"},
+    "fin": {
+      "titulo": "Fin de la temporada",
+      "sobrevive": "¡{pueblo} ha sobrevivido!",
+      "noAguanta": "{pueblo} no ha aguantado",
+      "superado": "Has superado los {total} desastres.",
+      "llegaste": "Has llegado hasta el desastre {n} de {total}.",
+      "puntuacion": "Puntuación",
+      "record": "¡Nuevo récord!",
+      "recordActual": "Récord: {n}",
+      "desbloqueado": "Has desbloqueado:",
+      "enRanking": "Tu puntuación está en el ranking de hoy.",
+      "rankingFallo": "No se ha podido guardar tu puntuación en el ranking.",
+      "graficaVecinos": "Vecinos a lo largo de la temporada",
+      "graficaMoral": "Moral a lo largo de la temporada",
+      "graficaDanados": "Edificios dañados en cada desastre",
+      "masDanio": "Lo que más daño te hizo",
+      "masSalvo": "Lo que más te salvó",
+      "masConstruiste": "Lo que más construiste",
+      "tuGente": "Tu gente",
+      "gente": "{siguen} siguen · {fueron} se fueron",
+      "nada": "Nada",
+      "suerte": "La suerte",
+      "mejoras": "Mejoras elegidas",
+      "volver": "Volver al menú"
+    },
+    "grafica": {
+      "aria": "{nombre} a lo largo de la temporada",
+      "danados": "Edificios dañados en cada desastre",
+      "inicio": "Inicio",
+      "tras": "Tras el desastre {n}",
+      "ini": "ini",
+      "barra": "Desastre {n}: {dm} dañados"
+    }
+  }
+}

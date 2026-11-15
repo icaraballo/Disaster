@@ -8,8 +8,8 @@ Juego de gestión y supervivencia por turnos: eres el alcalde de un pueblo peque
 conseguir que aguante una **temporada de 8 desastres** cada vez más fuertes. Entre desastre y
 desastre hay poco tiempo para prepararse y nunca sabes del todo qué va a venir.
 
-**Estado:** prototipo jugable cerrado en la fase de diseño (noviembre de 2026). Siguiente paso:
-portarlo a módulos.
+**Estado:** jugable en la web. El prototipo de la fase de diseño (noviembre de 2026) está portado a
+módulos, con textos aparte, lógica sin pantalla y tests de equilibrio con bots.
 
 ## Cómo se juega
 
@@ -32,9 +32,30 @@ pero debilita la ladera. Cada desastre deja consecuencias para el siguiente.
 - **Equilibrado con simulación**: un simulador de bots juega miles de partidas para ajustar la
   dificultad.
 
-## Probar el prototipo
+## Jugar y probar
 
-Abre `reference/disaster-prototipo-v1.html` en el navegador. Es un solo archivo, sin dependencias.
+- **En la web:** https://icaraballo.github.io/Disaster/
+- **En local:** `npm run serve` y abre http://127.0.0.1:8765/ (los módulos de JavaScript no
+  funcionan abriendo `index.html` con doble clic).
+- **Tests:** `npm test` (textos, lógica, pantallas y equilibrio con bots). No hace falta
+  `npm install`: el juego no tiene dependencias.
+- **Simulador de bots:** `npm run simular` cuenta cuántas partidas gana cada bot en cada pueblo.
+- El prototipo original de un solo archivo sigue en `reference/disaster-prototipo-v1.html`
+  (referencia, no se edita).
+
+## Estructura
+
+```
+index.html        la página (sólo carga css/ y js/main.js)
+css/              estilos
+data/             pueblos, desastres, alcaldes, oficios, casillas y números del equilibrio
+i18n/es.json      todos los textos que ve el jugador
+js/               la lógica del juego, sin pantalla (estado, partida, turnos, desastres, riesgo…)
+js/ui/            el dibujo: lee el estado y genera el HTML
+tests/            tests y los bots (ingenuo y listo)
+tools/            simulador de bots
+reference/        el prototipo v1, tal cual salió del diseño
+```
 
 ## Documentación
 
