@@ -71,7 +71,7 @@ siguiente AVISO … hasta el desastre 8 → INFORME FINAL
 | Riesgo de ladera | 10 % | Probabilidad base de deslizamiento (y de aludes). Sube al talar, sacar piedra o perder bosque. |
 | Tu gente | 8 personas | Una por oficio + una sin oficio. Son quienes trabajan cada turno. |
 
-**Se pierde** si quedan menos de 15 vecinos, si la moral llega a 0 o si no queda nadie para
+**Se pierde** si quedan menos de 22 vecinos (15 en la v1; ver DS-DESIGN), si la moral llega a 0 o si no queda nadie para
 trabajar. **La moral es lo que más partidas tumba** (ver §12).
 
 ## 5. Tu gente: vecinos con nombre y oficio

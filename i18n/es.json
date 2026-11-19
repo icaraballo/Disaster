@@ -286,7 +286,7 @@
       "ojo": "<b>Ojo:</b> talar y sacar piedra debilitan la ladera. Los diques empujan el agua río abajo. Nada es gratis.",
       "impacto": "<b>Impacto:</b> ves qué aguanta. Si se daña la casa de alguien de tu gente, puede acabar herido. Si le vuelve a pasar, se marcha.",
       "entre": "<b>Entre desastres:</b> eliges 1 mejora de 3 y a veces pasa algo en el pueblo que te obliga a decidir.",
-      "pierdes": "Pierdes si quedan menos de 15 vecinos, la moral llega a 0 o no queda nadie para trabajar. Toca el mapa para ver qué es cada casilla y usa el mapa de riesgo."
+      "pierdes": "Pierdes si quedan menos de 22 vecinos, la moral llega a 0 o no queda nadie para trabajar. Toca el mapa para ver qué es cada casilla y usa el mapa de riesgo."
     },
     "ranking": {
       "titulo": "Ranking del reto de hoy",

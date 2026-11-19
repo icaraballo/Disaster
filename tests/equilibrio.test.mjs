@@ -4,25 +4,33 @@
 // Uso: npm test   (o node --test tests/equilibrio.test.mjs)
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { cargarTextosDeDisco, ingenuo, listo, simular } from './bots.mjs';
+import { cargarTextosDeDisco, ingenuo, medio, listo, simular } from './bots.mjs';
 
 cargarTextosDeDisco();
 const N = 300;
 const medir = (bot, town, alc = 'ingeniera') => simular(bot, {town, alc, n: N});
 
-test('jugando sin pensar: ~30 % en Villarrío y casi nada en Arrieta y Errekalde', () => {
+test('jugando sin pensar: poco en Villarrío y casi nada en los demás', () => {
   const v = medir(ingenuo, 'villarrio').pct, a = medir(ingenuo, 'arrieta').pct, e = medir(ingenuo, 'errekalde').pct;
-  assert.ok(v >= 18 && v <= 45, `Villarrío ingenuo: ${v.toFixed(0)} % (esperado 18-45)`);
+  assert.ok(v <= 15, `Villarrío ingenuo: ${v.toFixed(0)} % (esperado ≤ 15)`);
   assert.ok(a <= 10, `Arrieta ingenuo: ${a.toFixed(0)} % (esperado ≤ 10)`);
   assert.ok(e <= 10, `Errekalde ingenuo: ${e.toFixed(0)} % (esperado ≤ 10)`);
 });
 
 test('jugando con cabeza se gana casi siempre, en todos los pueblos', () => {
-  // 19-11: con el bot corregido (T-07) gana ~99-100 % en los cuatro pueblos; margen de unos 7 puntos.
-  const minimo = {villarrio: 92, arrieta: 92, altuzarra: 92, errekalde: 92};
+  // 19-11: con el bot corregido (T-07) y el equilibrio más duro, el listo gana ~83-100 %; margen de unos 5 puntos.
+  const minimo = {villarrio: 90, arrieta: 88, altuzarra: 90, errekalde: 78};
   for (const [town, min] of Object.entries(minimo)) {
     const pct = medir(listo, town).pct;
     assert.ok(pct >= min, `${town} listo: ${pct.toFixed(0)} % (esperado ≥ ${min})`);
+  }
+});
+
+test('el jugador que se despista (medio) queda entre el ingenuo y el listo', () => {
+  for (const town of ['villarrio', 'arrieta', 'altuzarra', 'errekalde']) {
+    const m = medir(medio, town).pct, l = medir(listo, town).pct;
+    assert.ok(m >= 30 && m <= 90, `${town} medio: ${m.toFixed(0)} % (esperado 30-90)`);
+    assert.ok(l - m >= 8, `${town}: medio ${m.toFixed(0)} % frente a listo ${l.toFixed(0)} %`);
   }
 });
 

@@ -3,7 +3,7 @@
 import { clamp } from '../js/util.js';
 
 export const TEMPORADA = 8;          // desastres por temporada
-export const VECINOS_MINIMOS = 15;   // por debajo, el pueblo se vacía
+export const VECINOS_MINIMOS = 22;   // por debajo, el pueblo se vacía
 export const DIQUE_ARRASTRE = 0.6;   // parte de la riada que un dique empuja río abajo
 export const DIQUE_BARATO_CEDE = 0.35;
 export const SEMILLA_RETO = 'villarrio-'; // prefijo de la semilla del reto diario (no cambiarlo: cambiaría los retos)

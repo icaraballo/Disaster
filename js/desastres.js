@@ -24,7 +24,7 @@ function damage(i, cause, ctx) {
   if (x.t === 'C') {
     if (x.evac) { save('evacuar'); return [{text:t('log.evacuada', {lugar: cap(nm)}), kind:'warn', tiles:[[i,'dmg']]}]; }
     const her = Math.max(0, 2 - (healthy('medico') ? 1 : 0) - (G.alc === 'enfermera' ? 1 : 0));
-    r.pop -= 3; r.heridos += her;
+    r.pop -= 5; r.heridos += her;
     out.push({text:t('log.casaDanada', {lugar: cap(nm), estado: t(already ? 'log.enRuinas' : 'log.danada'), heridos: her ? t('log.heridosY', {n: her, s: pl(her)}) : ''}), kind:'bad', tiles:[[i,'dmg']]});
     G.workers.filter(w => w.home === i && !w.gone && !w.temp).forEach(w => {
       if (healthy('medico') && w.of !== 'medico' && RI() < 0.5) { out.push({text:t('log.medicoEvita', {nombre: w.name, a: ao(w)}), kind:'good'}); return; }
@@ -105,7 +105,7 @@ export const RESOLVE = {
   tormenta(I, ev, ctx) {
     ev.push({text:t('log.tormenta'), kind:'title'});
     const builds = G.tiles.map((x, i) => BUILD.has(x.t) ? i : -1).filter(i => i >= 0);
-    shuffle(builds, RI).slice(0, 2 + I).forEach(i => {
+    shuffle(builds, RI).slice(0, 3 + I).forEach(i => {
       const prot = G.tiles.some((x, j) => x.rayo && cheb(i, j) <= 1);
       if (prot) { save('pararrayos'); ev.push({text:t('log.pararrayos', {lugar: tileName(i)}), kind:'good', tiles:[[i,'ok']]}); return; }
       ev.push({text:t('log.rayo', {lugar: tileName(i)}), kind:'warn', tiles:[[i,'bolt']]});
