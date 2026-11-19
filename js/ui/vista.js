@@ -9,7 +9,7 @@ import { TEMPORADA } from '../../data/balance.js';
 import { cap, esc, ao, pl, todayKey } from '../util.js';
 import { t } from '../i18n.js';
 import { G, T, townName, ofName, aytoDown, granjasOk, availableWorkers, freeWorkers, W } from '../estado.js';
-import { ACTIONS, costLabel, construccion, nombreConstruccion } from '../acciones.js';
+import { ACTIONS, costLabel, costLabelObra, planObra, construccion, nombreConstruccion } from '../acciones.js';
 import { production } from '../turnos.js';
 import { riskMap, tileRisks, tileState } from '../riesgo.js';
 import { retoDelDia } from '../partida.js';
@@ -18,7 +18,7 @@ import { CAPS } from '../ranking.js';
 import { lineChart, barChart } from './graficos.js';
 
 // Estado de la pantalla (no es de la partida): qué pantalla, reglas desplegadas, elección en «Nueva temporada».
-export const UI = {screen:'menu', howto:false, town:'villarrio', alc:'ingeniera'};
+export const UI = {screen:'menu', howto:false, town:'villarrio', alc:'ingeniera', persona:null};
 
 const u = (k, v) => t('ui.' + k, v);
 const nombreAlc = (a) => t('alcaldes.' + a.id + '.nombre');
@@ -131,11 +131,34 @@ function personStatus(w) {
   if (G.busy.includes(w.id)) return {code:'obra', text:u('persona.construyendo')};
   return {code:'libre', text:u('persona.libre')};
 }
+// Iconos de trabajo (SVG de trazo, 14 px) para la esquina del avatar.
+const ICONO_TRABAJO = {
+  talar:'<path d="M12 21v-6M12 3 6 12h3l-3 4h12l-3-4h3z"/>',
+  cantera:'<path d="M3 18 8 8l5 3 4-5 4 12z"/>',
+  granja:'<path d="M12 21v-9M12 12c0-4-3-6-7-6 0 4 3 6 7 6zM12 14c0-3 2-5 6-5 0 3-2 5-6 5z"/>',
+  recaudar:'<circle cx="12" cy="12" r="8"/><path d="M12 8v8M9.5 10.5c0-1.2 1.2-2 2.5-2s2.5.8 2.5 2-1.2 1.6-2.5 2-2.5.8-2.5 2 1.2 2 2.5 2 2.5-.8 2.5-2"/>',
+  obra:'<path d="M14 4 20 10 17 13 11 7zM12 9 4 17 7 20 15 12"/>'
+};
+const iconoTrabajo = (k) => '<span class="wi" aria-hidden="true"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + ICONO_TRABAJO[k] + '</svg></span>';
+
+// Franja de avatares: enseña quién está libre y en qué trabaja cada cual (no se asigna a mano).
 function peopleHTML() {
-  return '<div class="people">' + G.workers.filter(w => !w.gone).map(w => {
+  const vivos = G.workers.filter(w => !w.gone);
+  let h = '<div class="people">' + vivos.map(w => {
     const st = personStatus(w);
-    return '<button class="person' + (st.code === 'fuera' ? ' out' : '') + '" data-person="' + w.id + '"><div class="av" style="background:' + OFICIOS[w.of].color + '">' + w.name.charAt(0) + '</div><div><div class="nm">' + esc(w.name) + (w.temp ? u('persona.temporal') : '') + '</div><div class="st">' + ofName(w) + ' · ' + st.text + '</div></div></button>';
+    const job = st.code === 'trabaja' ? Object.keys(G.alloc).find(k => G.alloc[k].includes(w.id)) : (st.code === 'obra' ? 'obra' : null);
+    const cls = 'person' + (st.code === 'fuera' ? ' out' : '') + (job ? ' busy' : '') + (UI.persona === w.id ? ' sel' : '');
+    const aria = u('persona.aria', {nombre: w.name, oficio: ofName(w), estado: st.text});
+    return '<button class="' + cls + '" data-person="' + w.id + '" aria-label="' + esc(aria) + '" aria-pressed="' + (UI.persona === w.id) + '"><span class="av" style="background:' + OFICIOS[w.of].color + '">' + esc(w.name.charAt(0)) + (job ? iconoTrabajo(job) : '') + '</span><span class="nm">' + esc(w.name) + (w.temp ? '*' : '') + '</span></button>';
   }).join('') + '</div>';
+  const sel = UI.persona ? vivos.find(w => w.id === UI.persona) : null;
+  if (sel) {
+    h += '<div class="pcard"><div><b>' + esc(sel.name) + '</b> · ' + ofName(sel) + (sel.temp ? u('persona.temporal') : '') + '</div>'
+      + '<div>' + t('oficios.' + sel.of + '.desc') + '</div>'
+      + '<div><b>' + personStatus(sel).text + '</b></div>'
+      + '<div class="muted">' + u('persona.casa', {a: ao(sel)}) + '</div></div>';
+  } else h += '<div class="muted" style="font-size:12.5px">' + u('prep.ayudaGente') + '</div>';
+  return h;
 }
 
 // Ficha de la casilla tocada.
@@ -153,7 +176,7 @@ function infoHTML() {
     h += '<div class="label">' + u('ficha.quePuedes') + '</div>';
     if (work) h += '<div style="font-size:13px;line-height:1.4">' + work + '</div>';
     if (acts.length) {
-      if (G.phase === 'prep') h += '<div style="display:flex;gap:6px;flex-wrap:wrap">' + acts.map(k => '<button class="doat" data-doat="' + k + '">' + (k === 'dique' ? nombreConstruccion(construccion(k, x)) : t('acciones.' + k + '.nombre')) + ' <span>' + costLabel(ACTIONS[k]) + '</span></button>').join('') + '</div>';
+      if (G.phase === 'prep') h += '<div style="display:flex;gap:6px;flex-wrap:wrap">' + acts.map(k => '<button class="doat" data-doat="' + k + '">' + (k === 'dique' ? nombreConstruccion(construccion(k, x)) : t('acciones.' + k + '.nombre')) + ' <span>' + costLabelObra(k) + '</span></button>').join('') + '</div>';
       else h += '<div style="font-size:13px;line-height:1.4">' + acts.map(k => t('acciones.' + k + '.nombre') + ' (' + costLabel(ACTIONS[k]) + ')').join(' · ') + ' <span class="muted">' + u('ficha.enPreparacion') + '</span></div>';
     }
   }
@@ -221,10 +244,17 @@ function prepHTML() {
   JOBS.forEach(k => {
     const n = t('trabajos.' + k);
     const who = G.alloc[k].map(id => W(id).name).join(', ');
-    h += '<div class="job' + (G.alloc[k].length ? ' on' : '') + (k === 'talar' || k === 'cantera' ? ' danger' : '') + '"><div class="n">' + n + '</div><div class="y">' + yields[k] + '</div><div class="who">' + esc(who) + '</div><div class="step"><button class="m" data-job="' + k + '" data-d="-1" aria-label="' + u('prep.quitar', {trabajo: n}) + '"' + (G.alloc[k].length ? '' : ' disabled') + '>−</button><b>' + G.alloc[k].length + '</b><button class="p" data-job="' + k + '" data-d="1" aria-label="' + u('prep.anadir', {trabajo: n}) + '"' + (free > 0 ? '' : ' disabled') + '>+</button></div></div>';
+    const cnt = G.alloc[k].length;
+    h += '<div class="job' + (cnt ? ' on' : '') + (k === 'talar' || k === 'cantera' ? ' danger' : '') + '"><div class="n">' + n + '</div><div class="y">' + yields[k] + '</div><div class="who">' + esc(who) + '</div><b class="cnt">' + cnt + '</b>'
+      + '<button class="half l" data-job="' + k + '" data-d="-1" aria-label="' + esc(u('prep.quitar', {trabajo: n})) + '"' + (cnt ? '' : ' disabled') + '><span aria-hidden="true">−</span></button>'
+      + '<button class="half r" data-job="' + k + '" data-d="1" aria-label="' + esc(u('prep.anadir', {trabajo: n})) + '"' + (free > 0 ? '' : ' disabled') + '><span aria-hidden="true">+</span></button></div>';
   });
   h += '</div><div class="label">' + u('prep.construir') + '</div><div class="acts">';
-  for (const k in ACTIONS) h += '<button class="act' + (G.sel === k ? ' sel' : '') + '" data-act="' + k + '"><span class="n">' + t('acciones.' + k + '.nombre') + '</span><span class="c">' + costLabel(ACTIONS[k]) + '</span></button>';
+  for (const k in ACTIONS) {
+    const plan = planObra(k);
+    h += '<button class="act' + (G.sel === k ? ' sel' : '') + (plan.completo ? '' : ' low') + '" data-act="' + k + '"><span class="n">' + t('acciones.' + k + '.nombre') + '</span><span class="c">' + costLabelObra(k) + '</span>'
+      + (plan.albanil ? '<span class="d">' + u('prep.ahorra', {nombre: esc(plan.albanil.name), material: t('recursos.' + plan.material)}) + '</span>' : '') + '</button>';
+  }
   h += '</div>';
   if (G.sel) h += '<div class="hint">' + t('acciones.' + G.sel + '.desc') + (G.workers.some(w => w.of === 'albanil' && !w.gone) ? ' ' + u('prep.albanil') : '') + '</div>';
   h += warnings();

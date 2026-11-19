@@ -139,7 +139,6 @@
     "falta": "Te falta {recurso} ({n} necesario).",
     "hecho": "{obra} hecho por {quien}.",
     "aquiNo": "Aquí no se puede: {accion}.",
-    "persona": "{nombre} · {oficio}: {desc}",
     "seUne": "{nombre} ({oficio}) se une al pueblo.",
     "produccion": {
       "madera": "+{n} madera", "piedra": "+{n} piedra", "comida": "+{n} comida", "dinero": "+{n} dinero",
@@ -340,7 +339,9 @@
       "papeleo": "papeleo",
       "construyendo": "construyendo",
       "libre": "libre",
-      "temporal": " (temporal)"
+      "temporal": " (temporal)",
+      "aria": "{nombre}, {oficio}, {estado}",
+      "casa": "Vive en la casilla marcada del mapa. Si le pasa algo a esa casa, puede resultar herid{a} y no trabajar en la siguiente preparación (evacuar la protege y el médico reduce los heridos)."
     },
     "mapa": {"accionAqui": "{accion} en esta casilla"},
     "ficha": {
@@ -371,8 +372,8 @@
       "titulo": "Preparación",
       "turno": "Turno <b style=\"color:#23262B\">{n}</b> de {total}",
       "prevision": "Previsión:",
-      "tuGente": "Tu gente · toca a alguien para ver qué sabe hacer",
-      "producir": "Producir · reparte a tu gente",
+      "tuGente": "Tu gente",
+      "producir": "Producir · toca la mitad derecha para subir, la izquierda para bajar",
       "rinde": {
         "talar": "+2 madera c/u · ladera +4%",
         "cantera": "+1 piedra c/u · ladera +6%",
@@ -380,8 +381,10 @@
         "sequia": " (½ por sequía)",
         "recaudar": "+15 dinero c/u · −2 moral"
       },
-      "quitar": "Quitar a alguien de {trabajo}",
-      "anadir": "Añadir a alguien a {trabajo}",
+      "quitar": "Quitar uno de {trabajo}",
+      "anadir": "Añadir uno a {trabajo}",
+      "ayudaGente": "El icono de un avatar indica en qué trabaja. Los atenuados ya tienen tarea este turno.",
+      "ahorra": "{nombre} ahorra 1 de {material}",
       "construir": "Construir y proteger · elige y toca el mapa",
       "albanil": "Si lo hace alguien albañil, ahorra 1 de material.",
       "terminarTurno": "Terminar turno",

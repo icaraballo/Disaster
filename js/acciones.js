@@ -48,21 +48,42 @@ export function rankJob(w, job) {
   return 3;
 }
 
+// Quién construye una obra y cuánto cuesta de verdad, sin tocar la partida (sin DOM y sin modificar G).
+// equipo: las `cuad` personas libres más adecuadas; coste: materiales con el descuento del albañil ya aplicado;
+// albanil y material: quién ahorra y de qué, o null si no hay descuento; completo: hay gente libre suficiente.
+// La vista y doAction usan esta misma función: lo que se enseña antes de construir es lo que se cobra después.
+export function planObra(clave) {
+  const a = ACTIONS[clave];
+  const fw = freeWorkers().sort((p, q) => rankBuild(p) - rankBuild(q));
+  const equipo = fw.slice(0, a.cuad);
+  const coste = a.cost();
+  let albanil = null, material = null;
+  const alb = equipo.find(w => w.of === 'albanil');
+  if (alb) {
+    const mats = ['piedra','madera'].filter(k => (coste[k] || 0) > 0).sort((p, q) => coste[q] - coste[p]);
+    if (mats.length) { coste[mats[0]]--; albanil = alb; material = mats[0]; }
+  }
+  return {equipo, coste, albanil, material, completo: equipo.length >= a.cuad};
+}
+
+// Texto del coste con el descuento ya aplicado (el mismo cálculo que la obra real).
+export function costLabelObra(clave) {
+  const a = ACTIONS[clave];
+  const c = planObra(clave).coste;
+  const parts = Object.keys(c).filter(k => c[k] > 0).map(k => c[k] + ' ' + t('recursos.' + k));
+  parts.push(a.cuad > 1 ? t('ui.variasPersonas', {n: a.cuad}) : t('ui.unaPersona', {n: a.cuad}));
+  return parts.join(' · ');
+}
+
 // Construye la acción elegida (G.sel) en la casilla i. Deja en G.msg lo que ha pasado.
 // Devuelve true si se ha construido.
 export function doAction(i) {
   const a = ACTIONS[G.sel]; const x = T(i);
   if (!a || !a.valid(x, i)) return false;
-  const fw = freeWorkers().sort((p, q) => rankBuild(p) - rankBuild(q));
-  if (fw.length < a.cuad) { G.msg = t('msg.sinGente'); return false; }
-  const crew = fw.slice(0, a.cuad);
-  const c = a.cost();
-  let note = '';
-  const alb = crew.find(w => w.of === 'albanil');
-  if (alb) {
-    const mats = ['piedra','madera'].filter(k => (c[k] || 0) > 0).sort((p, q) => c[q] - c[p]);
-    if (mats.length) { c[mats[0]]--; note = ' ' + t('msg.albanil', {nombre: alb.name, material: t('recursos.' + mats[0])}); }
-  }
+  const plan = planObra(G.sel);
+  if (!plan.completo) { G.msg = t('msg.sinGente'); return false; }
+  const crew = plan.equipo, c = plan.coste;
+  const note = plan.albanil ? ' ' + t('msg.albanil', {nombre: plan.albanil.name, material: t('recursos.' + plan.material)}) : '';
   for (const k in c) if (G.res[k] < c[k]) { G.msg = t('msg.falta', {recurso: t('recursos.' + k), n: c[k]}); return false; }
   for (const k in c) G.res[k] -= c[k];
   crew.forEach(w => G.busy.push(w.id));

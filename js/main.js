@@ -26,6 +26,7 @@ function vigilarImpacto() {
 function dibujar() { render(); vigilarImpacto(); }
 
 function irA(g) {
+  UI.persona = null;
   const top = () => window.scrollTo(0, 0);
   if (g === 'setup') { UI.screen = 'setup'; if (!unlockedTown(UI.town)) UI.town = 'villarrio'; top(); return dibujar(); }
   if (g === 'menu') { UI.screen = 'menu'; setG(null); clearInterval(timer); timer = null; top(); return dibujar(); }
@@ -48,16 +49,16 @@ function clic(e) {
   if (d.heat) { G.heat = !G.heat; return dibujar(); }
   if (d.job) { changeJob(d.job, +d.d); return dibujar(); }
   if (d.act) { G.sel = G.sel === d.act ? null : d.act; G.msg = ''; return dibujar(); }
-  if (d.person) { const w = W(d.person); G.msg = t('msg.persona', {nombre: w.name, oficio: ofName(w), desc: t('oficios.' + w.of + '.desc')}); G.insp = w.home; return dibujar(); }
+  if (d.person) { if (UI.persona === d.person) { UI.persona = null; G.insp = null; } else { UI.persona = d.person; G.insp = W(d.person).home; } return dibujar(); }
   if (d.tile) {
-    const i = +d.tile;
+    const i = +d.tile; UI.persona = null;
     if (G.phase === 'prep' && G.sel) {
       if (ACTIONS[G.sel].valid(T(i), i)) { doAction(i); return dibujar(); }
       G.msg = t('msg.aquiNo', {accion: t('acciones.' + G.sel + '.nombre').toLowerCase()}); G.sel = null; G.insp = i; return dibujar();
     }
     G.insp = G.insp === i ? null : i; return dibujar();
   }
-  if (d.close) { G.insp = null; return dibujar(); }
+  if (d.close) { UI.persona = null; G.insp = null; return dibujar(); }
   if (d.doat) { G.sel = d.doat; doAction(G.insp); G.sel = null; return dibujar(); }
   if (d.perk) { top(); choosePerk(d.perk); return dibujar(); }
   if (d.ev) { top(); chooseEvent(+d.ev); return dibujar(); }
