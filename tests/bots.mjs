@@ -48,11 +48,13 @@ const EVENTO_ELIGE = {
   hospital: () => 0, miedo: () => 0, montaneros: () => 0, subvencion: () => 0
 };
 
-export function listo(seed) {
+// opc (para el «medio»): olvido = probabilidad de saltarse una obra; sinEvacuar; sinObservatorio.
+export function listo(seed, opc = {}) {
   const R = mulberry32(seed * 17 + 3);
   const libres = () => freeWorkers().length;
   const construir = (acc, i) => {
     if (!ACTIONS[acc] || !ACTIONS[acc].valid(T(i), i) || libres() < ACTIONS[acc].cuad) return false;
+    if (opc.olvido && R() < opc.olvido) return false;
     G.sel = acc; const ok = doAction(i); G.sel = null; return ok;
   };
   const hay = (k) => G.fc.real.includes(k) || G.fc.decoy.includes(k);
@@ -63,12 +65,12 @@ export function listo(seed) {
     // 1. reparar lo dañado
     edif.forEach(i => { if (T(i).dmg && G.res.madera >= 2) construir('reparar', i); });
     // 2. observatorio si se puede (mejora la previsión)
-    if (G.res.madera >= 4 && G.res.dinero >= 30 + 15) {
+    if (!opc.sinObservatorio && G.res.madera >= 4 && G.res.dinero >= 30 + 15) {
       const prados = G.tiles.map((x, i) => i).filter(i => T(i).t === 'P');
       if (prados.length && libres() >= 2) construir('observatorio', prados[Math.floor(R() * prados.length)]);
     }
     // 2b. evacuar las casas amenazadas (una casa evacuada no pierde vecinos ni deja heridos)
-    edif.filter(i => T(i).t === 'C' && heat[i] >= 0.1).slice(0, 6).forEach(i => { if (G.res.comida >= 6) construir('evacuar', i); });
+    if (!opc.sinEvacuar) edif.filter(i => T(i).t === 'C' && heat[i] >= 0.1).slice(0, 6).forEach(i => { if (G.res.comida >= 6) construir('evacuar', i); });
     const peligrosos = edif.filter(i => heat[i] >= 0.12).slice(0, 8);
     // 3. proteger según lo que viene
     if (hay('riada') || hay('temporal')) {
@@ -138,6 +140,11 @@ export function listo(seed) {
     }
   };
 }
+
+// ---------- el medio: un jugador que se despista ----------
+// El listo, pero se olvida de una de cada tres obras, no evacúa y no construye el observatorio.
+// Sirve de referencia de un jugador humano normal: el equilibrio se mide entre el ingenuo y el listo.
+export const medio = (seed) => listo(seed, {olvido: 0.35, sinEvacuar: true, sinObservatorio: true});
 
 // ---------- bucle de una partida sin pantalla ----------
 // opts: lo mismo que newGame (town, alc, semilla…). Devuelve cómo acabó.
