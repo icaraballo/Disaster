@@ -9,7 +9,8 @@ conseguir que aguante una **temporada de 8 desastres** cada vez más fuertes. En
 desastre hay poco tiempo para prepararse y nunca sabes del todo qué va a venir.
 
 **Estado:** jugable en la web. El prototipo de la fase de diseño (noviembre de 2026) está portado a
-módulos, con textos aparte, lógica sin pantalla y tests de equilibrio con bots.
+módulos, con textos aparte, lógica sin pantalla y tests de equilibrio con bots. Desde el 19-11 el
+pueblo se ve en un **mapa en 3D**.
 
 ## Cómo se juega
 
@@ -24,6 +25,8 @@ pero debilita la ladera. Cada desastre deja consecuencias para el siguiente.
 
 ## Lo que lo hace distinto
 
+- **El pueblo en 3D.** Mapa con [Three.js](https://threejs.org), modelos low-poly hechos por
+  código, un ambiente por desastre, el impacto animado y vecinos que caminan hasta su tarea.
 - **Riesgo a la vista.** Un mapa de riesgo calcula la probabilidad de daño de cada edificio
   según la previsión, y al final hay un informe con gráficas de lo que pasó.
 - **Vecinos con nombre y oficio** que pueden resultar heridos o marcharse.
@@ -39,7 +42,8 @@ pero debilita la ladera. Cada desastre deja consecuencias para el siguiente.
   funcionan abriendo `index.html` con doble clic).
 - **Tests:** `npm test` (textos, lógica, pantallas y equilibrio con bots). No hace falta
   `npm install`: el juego no tiene dependencias.
-- **Simulador de bots:** `npm run simular` cuenta cuántas partidas gana cada bot en cada pueblo.
+- **Simulador de bots:** `npm run simular` cuenta cuántas partidas gana cada bot (ingenuo, medio y
+  listo) en cada pueblo.
 - El prototipo original de un solo archivo sigue en `reference/disaster-prototipo-v1.html`
   (referencia, no se edita).
 
@@ -51,8 +55,9 @@ css/              estilos
 data/             pueblos, desastres, alcaldes, oficios, casillas y números del equilibrio
 i18n/es.json      todos los textos que ve el jugador
 js/               la lógica del juego, sin pantalla (estado, partida, turnos, desastres, riesgo…)
-js/ui/            el dibujo: lee el estado y genera el HTML
-tests/            tests y los bots (ingenuo y listo)
+js/ui/            el dibujo: lee el estado y genera el HTML; el mapa en 3D (mapa3d, modelos3d…)
+js/vendor/        Three.js (MIT), tal cual, sin compilar
+tests/            tests y los bots (ingenuo, medio y listo)
 tools/            simulador de bots
 reference/        el prototipo v1, tal cual salió del diseño
 ```
@@ -70,4 +75,5 @@ proyecto, las decisiones de diseño y las pruebas son de Iñigo.
 
 ## Licencia
 
-© 2026 icaraballo. Todos los derechos reservados. Ver [LICENSE](LICENSE).
+© 2026 icaraballo. Todos los derechos reservados. Ver [LICENSE](LICENSE). Incluye
+[Three.js](https://threejs.org) con licencia MIT ([`js/vendor/LICENSE-three.txt`](js/vendor/LICENSE-three.txt)).
