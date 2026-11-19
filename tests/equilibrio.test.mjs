@@ -18,7 +18,8 @@ test('jugando sin pensar: ~30 % en Villarrío y casi nada en Arrieta y Errekalde
 });
 
 test('jugando con cabeza se gana casi siempre, en todos los pueblos', () => {
-  const minimo = {villarrio: 85, arrieta: 68, altuzarra: 85, errekalde: 65};
+  // 19-11: con el bot corregido (T-07) gana ~99-100 % en los cuatro pueblos; margen de unos 7 puntos.
+  const minimo = {villarrio: 92, arrieta: 92, altuzarra: 92, errekalde: 92};
   for (const [town, min] of Object.entries(minimo)) {
     const pct = medir(listo, town).pct;
     assert.ok(pct >= min, `${town} listo: ${pct.toFixed(0)} % (esperado ≥ ${min})`);

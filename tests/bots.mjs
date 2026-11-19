@@ -1,7 +1,9 @@
 // Jugadores automáticos y bucle de partida sin pantalla. Los usan los tests y tools/simular.mjs.
 //   ingenuo: reparte a la gente al azar y no construye nunca ni elige con criterio.
 //   listo:   usa el mapa de riesgo, protege según la previsión, produce lo que falta y deja
-//            la cantera cuando la ladera pasa del 35 %.
+//            la cantera cuando la ladera pasa del 35 %. Cada turno suelta el reparto del turno
+//            anterior (el reparto se arrastra de un turno a otro) y vuelve a pensar: primero
+//            proteger, luego producir con la gente que queda libre.
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
@@ -120,7 +122,12 @@ export function listo(seed) {
   }
 
   return {
-    preparar() { proteger(); producir(); },
+    preparar() {
+      // Como haría un jugador: el reparto de producción se arrastra al turno siguiente, así que se
+      // libera a todos antes de proteger. Sin esto, en los turnos 2 y 3 no quedaba gente para construir.
+      for (const j of TRABAJOS) while (G.alloc[j].length) changeJob(j, -1);
+      proteger(); producir();
+    },
     mejora(ofertas) {
       return [...ofertas].sort((a, b) => MEJORAS_ORDEN.indexOf(a.id) - MEJORAS_ORDEN.indexOf(b.id))[0];
     },
