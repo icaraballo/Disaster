@@ -6,12 +6,15 @@ import { ganchos, initCaps } from './ranking.js';
 import { G, setG, T, W, ofName } from './estado.js';
 import { OFICIOS } from '../data/gente.js';
 import { newGame } from './partida.js';
-import { ACTIONS, doAction } from './acciones.js';
+import { ACTIONS, doAction, planObra } from './acciones.js';
+import { TIEMPOS } from '../data/escena3d.js';
+import { animarNumeros } from './ui/numeros.js';
 import { changeJob, endTurn } from './turnos.js';
 import { toResult, choosePerk, chooseEvent, finish } from './temporada.js';
 import { render, UI } from './ui/vista.js';
 
 let timer = null;
+let mapa3d = null;   // el módulo del mapa en 3D, si el navegador lo permite (si no, queda el mapa plano)
 
 // Si la partida acaba de llegar al impacto, va enseñando los sucesos de uno en uno.
 function vigilarImpacto() {
@@ -20,10 +23,38 @@ function vigilarImpacto() {
     if (!G || G.phase !== 'impact') { clearInterval(timer); timer = null; return; }
     G.impact.shown++;
     if (G.impact.shown >= G.impact.events.length) { clearInterval(timer); timer = null; }
-    render();
-  }, 700);
+    render(); if (mapa3d) mapa3d.alDibujar();
+  }, mapa3d ? TIEMPOS.ritmoImpacto : 700);
 }
-function dibujar() { render(); vigilarImpacto(); }
+function dibujar() { render(); if (mapa3d) mapa3d.alDibujar(); animarNumeros(); vigilarImpacto(); }
+
+// Carga el 3D sin bloquear el menú. Con ?mapa=plano, o sin WebGL, se queda el mapa plano de siempre.
+async function activar3d() {
+  if (/[?&]mapa=plano/.test(location.search)) return;
+  try {
+    const m = await import('./ui/mapa3d.js');
+    if (!m.iniciar()) return;
+    m.hooks.alTocarCasilla = tocarCasilla;
+    mapa3d = m; UI.mapa3d = true;
+    dibujar();
+  } catch (e) { console.warn('El mapa 3D no está disponible; se usa el mapa plano.', e); }
+}
+
+// Construye la acción elegida en la casilla i y, en el 3D, manda a la gente a esa casilla.
+function construir(i) {
+  const ids = G.sel && ACTIONS[G.sel] ? planObra(G.sel).equipo.map(w => w.id) : [];
+  if (doAction(i) && mapa3d) mapa3d.enviarA(ids, i);
+}
+
+// Tocar una casilla (del mapa plano o del 3D): construir si hay una acción elegida, o abrir la ficha.
+function tocarCasilla(i) {
+  UI.persona = null;
+  if (G.phase === 'prep' && G.sel) {
+    if (ACTIONS[G.sel].valid(T(i), i)) { construir(i); return dibujar(); }
+    G.msg = t('msg.aquiNo', {accion: t('acciones.' + G.sel + '.nombre').toLowerCase()}); G.sel = null; G.insp = i; return dibujar();
+  }
+  G.insp = G.insp === i ? null : i; return dibujar();
+}
 
 function irA(g) {
   UI.persona = null;
@@ -50,16 +81,9 @@ function clic(e) {
   if (d.job) { changeJob(d.job, +d.d); return dibujar(); }
   if (d.act) { G.sel = G.sel === d.act ? null : d.act; G.msg = ''; return dibujar(); }
   if (d.person) { if (UI.persona === d.person) { UI.persona = null; G.insp = null; } else { UI.persona = d.person; G.insp = W(d.person).home; } return dibujar(); }
-  if (d.tile) {
-    const i = +d.tile; UI.persona = null;
-    if (G.phase === 'prep' && G.sel) {
-      if (ACTIONS[G.sel].valid(T(i), i)) { doAction(i); return dibujar(); }
-      G.msg = t('msg.aquiNo', {accion: t('acciones.' + G.sel + '.nombre').toLowerCase()}); G.sel = null; G.insp = i; return dibujar();
-    }
-    G.insp = G.insp === i ? null : i; return dibujar();
-  }
+  if (d.tile) return tocarCasilla(+d.tile);
   if (d.close) { UI.persona = null; G.insp = null; return dibujar(); }
-  if (d.doat) { G.sel = d.doat; doAction(G.insp); G.sel = null; return dibujar(); }
+  if (d.doat) { G.sel = d.doat; construir(G.insp); G.sel = null; return dibujar(); }
   if (d.perk) { top(); choosePerk(d.perk); return dibujar(); }
   if (d.ev) { top(); chooseEvent(+d.ev); return dibujar(); }
 }
@@ -76,5 +100,6 @@ async function arrancar() {
   app.addEventListener('click', clic);
   dibujar();
   initCaps();
+  activar3d();
 }
 arrancar();

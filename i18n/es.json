@@ -332,6 +332,11 @@
       "ocultar": "Ocultar riesgo",
       "leyenda": "El % es la probabilidad estimada de que cada edificio sufra daños en el próximo desastre, según la previsión. Sequía, ola de calor y plaga no dañan edificios."
     },
+    "mapa3d": {
+      "aria": "Mapa del pueblo en 3D. Arrastra para girar, pellizca para acercar y toca una casilla para ver qué es.",
+      "recolocar": "Recolocar",
+      "recolocarAria": "Recolocar la cámara en la vista inicial"
+    },
     "persona": {
       "ido": "se ha ido",
       "herido": "herid{a}",

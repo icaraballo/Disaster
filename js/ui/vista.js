@@ -18,7 +18,7 @@ import { CAPS } from '../ranking.js';
 import { lineChart, barChart } from './graficos.js';
 
 // Estado de la pantalla (no es de la partida): qué pantalla, reglas desplegadas, elección en «Nueva temporada».
-export const UI = {screen:'menu', howto:false, town:'villarrio', alc:'ingeniera', persona:null};
+export const UI = {screen:'menu', howto:false, town:'villarrio', alc:'ingeniera', persona:null, mapa3d:false};
 
 const u = (k, v) => t('ui.' + k, v);
 const nombreAlc = (a) => t('alcaldes.' + a.id + '.nombre');
@@ -38,7 +38,9 @@ function ranking() {
 
 function svg(x) { return '<svg class="ic" viewBox="0 0 28 28" aria-hidden="true">' + ICON[x] + '</svg>'; }
 
+// Con el mapa 3D activo el HTML sólo deja un hueco: js/ui/mapa3d.js pone ahí su lienzo (que no se rehace).
 function mapHTML(mode) {
+  if (UI.mapa3d) return '<div class="mapa3d" data-modo="' + mode + '"></div>';
   const ov = {};
   if (mode === 'impact') G.impact.events.slice(0, G.impact.shown).forEach(e => (e.tiles || []).forEach(([i, k]) => { (ov[i] = ov[i] || new Set()).add(k); }));
   const a = G.sel ? ACTIONS[G.sel] : null;
