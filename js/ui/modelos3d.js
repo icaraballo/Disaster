@@ -118,6 +118,14 @@ export function crearModelos(THREE) {
       talud.scale.set(0.7, 1, 1); add(talud);
       add(malla(caja(0.97, 0.05, 0.22), mat(0xC9B58E), 0, h + 0.3, 0, { sombra: false }));
       for (let k = 0; k < 4; k++) add(malla(roca(0.05 + r() * 0.03), mat(0x6E5E48), (r() - 0.5) * 0.8, h + 0.06, 0.3 + (r() - 0.5) * 0.1));
+    } else if (t === 'H') {   // refugio: una nave baja con tejado a dos aguas y una cruz roja
+      const pared = dano ? matUnico(0x9B8466) : matUnico(0xF1E6CE);
+      add(malla(caja(0.74, 0.28, 0.46), pared, 0, h + 0.14, 0));
+      const tej = malla(cil(0.27, 0.27, 0.78, 3), matUnico(dano ? 0x5B5246 : 0x8E8A84), 0, h + 0.36, 0, { rz: Math.PI / 2 }); tej.scale.set(0.5, 1, 1); if (dano) tej.rotation.x = 0.25;
+      add(tej);
+      add(malla(caja(0.05, 0.16, 0.02), mat(0xC2391F, { emissive: 0x5A1408 }), 0, h + 0.15, 0.235, { sombra: false }));
+      add(malla(caja(0.16, 0.05, 0.02), mat(0xC2391F, { emissive: 0x5A1408 }), 0, h + 0.15, 0.235, { sombra: false }));
+      if (e.evacN) for (let k = 0; k < Math.min(3, e.evacN); k++) add(malla(cono(0.07, 0.12, 4), mat(0x2F6B9A), -0.3 + k * 0.12, h + 0.06, 0.34, { sombra: false }));
     } else if (t === 'A') {
       const pared = dano ? matUnico(0x9B8466) : matUnico(0xF1E6CE), tejado = matUnico(dano ? 0x4A3560 : 0x7A5A9E);
       add(malla(caja(0.72, 0.34, 0.5), pared, 0, h + 0.17, 0.05));

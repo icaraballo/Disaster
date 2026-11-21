@@ -7,7 +7,8 @@ import { DIQUE_ARRASTRE, TERRAPLEN_ARRASTRE, PASA_AGUA, FAMILIAS_POR_CASA, riada
 import { clamp, nb4, cheb } from './util.js';
 import { G, T, town, peligro, healthy } from './estado.js';
 import { detras } from './desastres.js';
-import { RUINAS, SOLAR, TERRAPLEN, familias, elegirAcogida, nombreCasa } from './casas.js';
+import { RUINAS, SOLAR, TERRAPLEN, REFUGIO, familias, elegirAcogida, nombreCasa, plazasUsadas, plazasRefugio, costeRefugio } from './casas.js';
+import { REFUGIO_PLAZAS } from '../data/balance.js';
 import { t } from './i18n.js';
 
 // Probabilidad (0-1) de que cada casilla sufra daños si llegan estos desastres con intensidad I.
@@ -78,6 +79,16 @@ export function riskFor(types, I) {
   return acc;
 }
 
+// El riesgo «habitual» de cada casilla en el próximo desastre, sin previsión: la media de los
+// desastres del pueblo según lo a menudo que salen. Lo usa el evento del refugio lleno (entre
+// desastres todavía no hay parte del observatorio, y no se puede dar pistas del calendario).
+export function riesgoHabitual() {
+  const pool = town().pool, I = G.schedule[Math.min(G.idx, G.schedule.length - 1)].I;
+  let tot = 0; const acc = new Array(N).fill(0);
+  for (const k in pool) { tot += pool[k]; riskFor([k], I).forEach((v, i) => { acc[i] += v * pool[k]; }); }
+  return acc.map(v => v / tot);
+}
+
 // Mezcla el riesgo del desastre real y del señuelo según la precisión de la previsión.
 export function riskMap() {
   const f = G.fc, a = riskFor(f.real, f.I), b = riskFor(f.decoy, f.I), p = f.pReal / 100;
@@ -112,7 +123,6 @@ export function tileRisks(i) {
   // T-12: la escalera de la casa y el agua que pasa por ruinas y solares
   if (x.t === 'C' && x.dmg) {
     const fam = familias(x);
-    if (fam) out.push(['bad', t('riesgos.sinRepararMoral', {n: 2 * fam})]);
     const dest = elegirAcogida(i);
     out.push(['bad', fam && x.propia ? (dest != null ? t('riesgos.aRuinasAcogida', {lugar: nombreCasa(dest)}) : t('riesgos.aRuinasSinSitio')) : t('riesgos.aRuinas')]);
   } else if (x.t === 'C' && familias(x) >= FAMILIAS_POR_CASA) out.push(['bad', t('riesgos.casaLlena')]);
@@ -142,7 +152,8 @@ export function tileState(i) {
   if (x.sacos) s.push({text: t('estado.sacos')});
   if (x.rayo) s.push({text: t('estado.pararrayos')});
   if (x.muro) s.push({text: t('estado.muro')});
-  if (x.evac) s.push({text: t('estado.evacuada')});
+  if (x.evac) s.push({text: costeRefugio(x) ? t('estado.refugioCoste', {n: costeRefugio(x)}) : t('estado.refugioPagado')});
+  if (x.t === REFUGIO) s.push({text: t('estado.plazas', {n: plazasUsadas(), total: plazasRefugio()})});
   for (const k in G.WORK) if (G.WORK[k] === i && G.alloc[k].length) s.push({text: t('estado.trabajando', {n: G.alloc[k].length})});
   if (x.t === 'C') { const f = familias(x); s.push(f ? {text: t('estado.familias', {n: f, s: f > 1 ? 's' : ''}), bad: f >= FAMILIAS_POR_CASA} : {text: t('estado.vacia')}); }
   if (x.t === RUINAS) s.push(x.acogidaEn != null ? {text: t('estado.acogidaEn', {lugar: nombreCasa(x.acogidaEn)})} : {text: t('estado.familiaIda'), bad: true});

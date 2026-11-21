@@ -35,8 +35,8 @@ export function newGame(opts) {
     stats:{cause:{}, saves:{}, builds:{}, hist:[], startPop:40, startMoral:70}, lastEvent:null
   });
   computeGeo();
-  if (alc === 'ingeniera') G.res.piedra += 3;
-  if (alc === 'agricultor') G.res.comida += 8;
+  if (alc === 'ingeniera') G.res.piedra += 2;
+  if (alc === 'agricultor') G.res.comida += 20;
   if (alc === 'tesorero') G.res.dinero += 40;
   OFICIOS_INICIALES.forEach(of => newWorker(of));
   // calendario de desastres (igual para todos en el reto diario)

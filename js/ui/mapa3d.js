@@ -14,7 +14,7 @@ import { crearModelos } from './modelos3d.js';
 import { crearCamara } from './camara3d.js';
 import { crearEfectos } from './efectos3d.js';
 import { C, entre, semillaCosmetica } from './cosmetico.js';
-import { familias } from '../casas.js';
+import { familias, plazasUsadas } from '../casas.js';
 
 const ancho = COLS, alto = FILAS;
 const posX = (i) => (i % COLS) - (COLS - 1) / 2;
@@ -119,7 +119,7 @@ export function alDibujar() {
 }
 
 // ---------------------------------------------------------------- sincronizar con el estado
-function firmaCasilla(e) { return [e.t, e.dmg ? 1 : 0, e.dique ? 1 : 0, e.cheap ? 1 : 0, e.muro ? 1 : 0, e.sacos ? 1 : 0, e.rayo ? 1 : 0, e.evac ? 1 : 0, e.fam >= 2 ? 1 : 0].join(''); }
+function firmaCasilla(e) { return [e.t, e.dmg ? 1 : 0, e.dique ? 1 : 0, e.cheap ? 1 : 0, e.muro ? 1 : 0, e.sacos ? 1 : 0, e.rayo ? 1 : 0, e.evac ? 1 : 0, e.fam >= 2 ? 1 : 0, e.evacN || 0].join(''); }
 
 function overlays() {
   const ov = {};
@@ -135,7 +135,7 @@ function estadoCasilla(i, modo, ov) {
     const tt = o.has('solar') ? 'V' : (o.has('ruinas') ? 'U' : b.t);
     return { t: tt, dmg: tt === b.t && !!(b.dmg || o.has('dmg')), dique: x.dique, cheap: x.cheap, muro: x.muro, sacos: false, rayo: x.rayo, evac: false, fam: (b.fam || 0) + (o.has('acogida') ? 1 : 0) };
   }
-  return { t: x.t, dmg: x.dmg, dique: x.dique, cheap: x.cheap, muro: x.muro, sacos: x.sacos, rayo: x.rayo, evac: x.evac, fam: familias(x) };
+  return { t: x.t, dmg: x.dmg, dique: x.dique, cheap: x.cheap, muro: x.muro, sacos: x.sacos, rayo: x.rayo, evac: x.evac, fam: familias(x), evacN: x.t === 'H' ? plazasUsadas() : 0 };
 }
 
 function reiniciarJuego() {

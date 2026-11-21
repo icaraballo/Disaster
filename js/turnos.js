@@ -12,7 +12,7 @@ export function production() {
   G.alloc.talar.forEach(id => { const w = W(id); r.madera += 2 + (w.of==='lenador'?2:0) + (G.perks.carpinteros?1:0); r.riesgo += 4; });
   G.alloc.cantera.forEach(id => { const w = W(id); r.piedra += 1 + (w.of==='cantero'?1:0); r.riesgo += w.of==='cantero'?3:6; });
   const g = granjasOk(), base = g >= 2 ? 2 : g;
-  G.alloc.granja.forEach(id => { const w = W(id); let v = base > 0 ? base + (w.of==='agricultor'?2:0) + (G.alc==='agricultor'?2:0) : 0; if (G.dryFarm) v = Math.floor(v/2); r.comida += v; });
+  G.alloc.granja.forEach(id => { const w = W(id); let v = base > 0 ? base + (w.of==='agricultor'?2:0) + (G.alc==='agricultor'?3:0) : 0; if (G.dryFarm) v = Math.floor(v/2); r.comida += v; });
   G.alloc.recaudar.forEach(id => { const w = W(id); r.dinero += 15 + (w.of==='comerciante'?10:0) + (G.alc==='tesorero'?5:0); r.moral -= (G.alc==='tesorero' || w.of==='comerciante') ? 1 : 2; });
   return r;
 }

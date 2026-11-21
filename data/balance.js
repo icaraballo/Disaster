@@ -10,15 +10,18 @@ export const TERRAPLEN_ARRASTRE = 0.3; // parte del agua que un terraplén junto
 // El agua que llega a unas ruinas o a un solar pasa a la casilla de detrás con esta probabilidad.
 export const PASA_AGUA = {U: 0.5, V: 1};
 
-// Casas y familias (T-12). Las pérdidas son por familia, no dependen de cuántas casas haya.
+// Casas y familias (T-12, revisado con Iñigo el 21-11): los vecinos sólo bajan cuando una familia se
+// va del pueblo; dañarse o caer en ruinas pesa en la moral.
 export const FAMILIAS_POR_CASA = 2;
-export const VECINOS_CASA_DANADA = 4;    // la familia sigue en casa, pero alguien se marcha
 export const VECINOS_FAMILIA_SE_VA = 5;  // una familia que se va del pueblo para siempre
-// Evacuar (decidido con Iñigo el 21-11): si la casa evacuada se daña no hay heridos, pero alguien se
-// marcha igual; y evacuar inquieta al pueblo. Sin coste, el listo evacuaba ~20 veces y no perdía a nadie.
-export const VECINOS_EVACUADA = 2;
-export const MORAL_EVACUAR = 0;
-export const MORAL_RUINAS = 3;           // una vez, cuando la casa cae en ruinas y la familia se muda
+export const MORAL_DANO_CASA = 6;        // la casa se daña (la familia sigue en ella)
+export const VECINOS_CASA_DANADA = 2;    // parte de la familia se marcha si se daña su casa sin evacuar (decidido el 21-11)
+export const MORAL_DANO_EDIFICIO = 6;    // se daña otro edificio (ayuntamiento, granja, observatorio, aljibe, refugio)
+export const MORAL_RUINAS = 10;           // la casa cae en ruinas y la familia tiene que irse de ella
+export const MORAL_FAMILIA_SE_VA = 6;    // además de los vecinos, cuando una familia se va del pueblo
+// El refugio (21-11): plazas (familias) y comida por desastre allí: 1, 2, 3… por familia.
+export const REFUGIO_PLAZAS = 3;
+export const MORAL_REFUGIO_LLENO = 4;    // decir que no a una familia que pide entrar
 // La previsión se afina en cada turno (T-12 §B.6): rango del % que se da al desastre real, por nivel
 // de precisión (1-3, obsLevel) y por turno de la preparación (1-3). Con menos turnos se pierden los primeros.
 export const PREVISION = {
@@ -29,13 +32,12 @@ export const PREVISION = {
 
 // Medallas (T-12 §B.7), al acabar la temporada. No cambian la puntuación ni el ranking.
 export const MEDALLAS = ['bronce', 'plata', 'oro'];
-export const MEDALLA_PLATA = {vecinos: 35, moral: 45};
-export const MEDALLA_ORO = {vecinos: 38, moral: 55}; // y ninguna casa en ruinas ni solar
+export const MEDALLA_PLATA = {vecinos: 34, moral: 40};
+export const MEDALLA_ORO = {vecinos: 40, moral: 45}; // y ninguna casa en ruinas ni solar
 
 // La moral pesa poco a poco (T-12 §B.5): personas desanimadas al empezar la preparación.
 export const DESANIMO = [{desde: 50, n: 0}, {desde: 30, n: 1}, {desde: 0, n: 2}];
 export const desanimados = (moral) => DESANIMO.find(d => moral >= d.desde).n;
-export const MORAL_SIN_REPARAR = {porFamilia: 2, otroEdificio: 1}; // en cada desastre, por lo que sigue dañado
 // Escalada (T-12): intensidad 1 en los desastres 1-2, 2 en el 3-5 y 3 en el 6-8 (índices desde 0).
 export const INTENSIDAD = (idx) => idx < 2 ? 1 : (idx < 5 ? 2 : 3);
 // Desastres dobles: probabilidad desde el desastre COMBO_DESDE (índice) y en el último.

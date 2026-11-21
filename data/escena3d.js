@@ -3,10 +3,10 @@
 // Aquí no hay reglas del juego: sólo aspecto. Los textos nuevos están en i18n/es.json, bajo «mapa3d».
 
 // Altura de cada tipo de casilla (el lado de una casilla mide 1).
-export const ALTURA = {B:0.38, X:0.30, Q:0.30, L:0.62, P:0.24, R:0.06, M:0.04, S:0.50, C:0.24, A:0.24, G:0.24, O:0.24, W:0.24, U:0.24, V:0.22, E:0.24};
+export const ALTURA = {B:0.38, X:0.30, Q:0.30, L:0.62, P:0.24, R:0.06, M:0.04, S:0.50, C:0.24, A:0.24, G:0.24, O:0.24, W:0.24, U:0.24, V:0.22, E:0.24, H:0.24};
 
 // Color de la parte de arriba de cada casilla (hex).
-export const COLOR_SUELO = {B:0x4E7A4F, X:0xB7C48F, Q:0x3A3631, L:0xA89478, P:0xA9C285, R:0xCBB88E, M:0x2F6FA6, S:0xE3E9EE, C:0xD9C9A3, A:0xD9C9A3, G:0xC9B57E, O:0xD9C9A3, W:0xD9C9A3, U:0xB9A88A, V:0xBDB08F, E:0x8E7F63};
+export const COLOR_SUELO = {B:0x4E7A4F, X:0xB7C48F, Q:0x3A3631, L:0xA89478, P:0xA9C285, R:0xCBB88E, M:0x2F6FA6, S:0xE3E9EE, C:0xD9C9A3, A:0xD9C9A3, G:0xC9B57E, O:0xD9C9A3, W:0xD9C9A3, U:0xB9A88A, V:0xBDB08F, E:0x8E7F63, H:0xD9C9A3};
 export const COLOR_AGUA = {R:0x5E9BD1, M:0x3C7DB8};
 export const COLOR_TIERRA = 0x6B5237;   // la peana
 export const COLOR_OFICIO_DANO = 0x6E4A32;

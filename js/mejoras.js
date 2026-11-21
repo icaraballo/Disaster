@@ -3,7 +3,10 @@
 import { clamp, ao } from './util.js';
 import { pick } from './azar.js';
 import { G, T, newWorker, ofName, obsLevel, aliveWorkers } from './estado.js';
-import { RUINAS, repararRuinas } from './casas.js';
+import { RUINAS, repararRuinas, elegirAcogida, nombreCasa, familias, refugioOk, plazasLibres, evacuarCasa, volverACasa, idxRefugio } from './casas.js';
+import { VECINOS_FAMILIA_SE_VA, MORAL_REFUGIO_LLENO } from '../data/balance.js';
+import { riesgoHabitual } from './riesgo.js';
+import { aytoIdx } from './estado.js';
 import { t } from './i18n.js';
 
 // ok() dice si la mejora tiene sentido ahora (para no ofrecer lo que no sirve).
@@ -25,13 +28,39 @@ const op = (ev, k, vars) => ({l: t('eventos.' + ev + '.' + k + '.l', vars), d: t
 const cabecera = (ev, vars) => ({titulo: t('eventos.' + ev + '.titulo'), texto: t('eventos.' + ev + '.texto', vars)});
 
 // cond() dice si el evento puede salir; mk() lo monta con sus opciones (l = título, d = qué hace, ok = si se puede elegir, a = efecto).
+// La casa con más riesgo habitual que no está en el refugio, si el refugio está lleno y corre peligro
+// (al menos un 25 %). null si no toca el evento.
+function refugioLlenoPeticion() {
+  if (!refugioOk() || plazasLibres() > 0) return null;
+  const r = riesgoHabitual();
+  const fuera = G.tiles.map((x, i) => x.t === 'C' && !x.evac && familias(x) > 0 && r[i] >= 0.25 ? i : -1).filter(i => i >= 0);
+  return fuera.length ? fuera.sort((a, b) => r[b] - r[a] || a - b)[0] : null;
+}
+
 export const EVENTS = [
   {id:'constructor', cond:()=>true, mk:()=>({...cabecera('constructor'),
     opts:[{...op('constructor','aceptar'), a:()=>{G.cheapDique=true;}},{...op('constructor','no'), a:()=>{}}]})},
   {id:'fiestas', cond:()=>true, mk:()=>({...cabecera('fiestas', {pueblo: t('pueblos.' + G.town + '.nombre')}),
     opts:[{...op('fiestas','celebrar'), a:()=>{G.res.moral=clamp(G.res.moral+15,0,100); G.lostTurn=1;}},{...op('fiestas','no'), a:()=>{G.res.moral=clamp(G.res.moral-5,0,100);}}]})},
-  {id:'refugiados', cond:()=>G.res.comida>=6, mk:()=>({...cabecera('refugiados'),
-    opts:[{...op('refugiados','acoger'), a:()=>{G.res.pop+=4; G.res.comida-=6; newWorker();}},{...op('refugiados','no'), a:()=>{G.res.moral=clamp(G.res.moral-8,0,100);}}]})},
+  // la familia que llega necesita una casa con sitio (vacía o con una sola familia)
+  {id:'refugiados', cond:()=>G.res.comida>=6 && elegirAcogida(aytoIdx()) != null, mk:()=>{
+    const casa = elegirAcogida(aytoIdx());
+    return {...cabecera('refugiados'),
+      opts:[{...op('refugiados','acoger', {n: VECINOS_FAMILIA_SE_VA, casa: nombreCasa(casa)}), a:()=>{
+        G.res.pop+=VECINOS_FAMILIA_SE_VA; G.res.comida-=6;
+        G.refugiados = (G.refugiados || 0) + 1; T(casa).huespedes.push(-G.refugiados);   // origen propio, fuera del mapa
+        const w = newWorker(); w.home = casa; w.familia = -G.refugiados; }},
+        {...op('refugiados','no'), a:()=>{G.res.moral=clamp(G.res.moral-8,0,100);}}]}; }},
+  // el refugio está lleno y una familia en peligro pide entrar: ¿a quién mandas a casa?
+  {id:'refugioLleno', cond:()=>refugioLlenoPeticion() != null, mk:()=>{
+    const p = refugioLlenoPeticion(), r = riesgoHabitual();
+    const pct = (i) => Math.round(r[i] * 100);
+    const dentro = G.tiles.map((x, i) => x.evac ? i : -1).filter(i => i >= 0).sort((a, b) => r[a] - r[b]).slice(0, 3);
+    return {...cabecera('refugioLleno', {casa: nombreCasa(p), riesgo: pct(p)}),
+      opts: dentro.map(i => ({...op('refugioLleno', 'sacar', {casa: nombreCasa(i), riesgo: pct(i)}),
+          ok:()=>G.res.comida >= familias(T(p)) && familias(T(i)) + plazasLibres() >= familias(T(p)),
+          a:()=>{ volverACasa(i); G.res.comida -= familias(T(p)); evacuarCasa(p); }}))
+        .concat([{...op('refugioLleno', 'no', {n: MORAL_REFUGIO_LLENO}), a:()=>{ G.res.moral = clamp(G.res.moral - MORAL_REFUGIO_LLENO, 0, 100); }}])}; }},
   {id:'mercado', cond:()=>true, mk:()=>({...cabecera('mercado'),
     opts:[{...op('mercado','piedra'), ok:()=>G.res.dinero>=25, a:()=>{G.res.dinero-=25; G.res.piedra+=4;}},
           {...op('mercado','comida'), ok:()=>G.res.dinero>=20, a:()=>{G.res.dinero-=20; G.res.comida+=6;}},

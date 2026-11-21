@@ -1,11 +1,10 @@
 // Acciones de construcción: coste, dónde valen y qué hacen. Se elige la acción y se toca una casilla.
 import { BUILD } from '../data/casillas.js';
-import { MORAL_EVACUAR } from '../data/balance.js';
 import { OFICIOS } from '../data/gente.js';
 import { clamp } from './util.js';
 import { G, T, hasType, freeWorkers } from './estado.js';
 import { nb4 } from './util.js';
-import { RUINAS, SOLAR, familias, repararRuinas, reconstruir, terraplen } from './casas.js';
+import { RUINAS, SOLAR, REFUGIO, familias, repararRuinas, reconstruir, terraplen, refugioOk, plazasLibres, evacuarCasa, volverACasa } from './casas.js';
 import { t } from './i18n.js';
 
 export const RECURSOS = ['dinero', 'madera', 'piedra', 'comida'];
@@ -22,8 +21,13 @@ export const ACTIONS = {
     apply:(x)=>{ x.rayo=true; }},
   muro:{cuad:2, cost:()=>({piedra:Math.max(0,2-(G.alc==='ingeniera'?1:0)), madera:2}), valid:(x)=>(x.t==='L'||x.t==='S') && !x.muro,
     apply:(x)=>{ x.muro=true; if (x.t==='L') G.res.riesgo=clamp(G.res.riesgo-15,0,95); }},
-  evacuar:{cuad:1, cost:()=>({comida:2}), valid:(x)=>x.t==='C' && familias(x) > 0 && !x.evac,
-    apply:(x)=>{ x.evac=true; G.res.moral=clamp(G.res.moral-MORAL_EVACUAR,0,100); }},
+  // evacuar: la familia va al refugio y se queda hasta que vuelva; el primer desastre se paga al entrar
+  evacuar:{cuad:1, cost:()=>({comida:1}), valid:(x)=>x.t==='C' && familias(x) > 0 && !x.evac && plazasLibres() >= familias(x), casa:true,
+    apply:(x, i)=>evacuarCasa(i)},
+  volverCasa:{cuad:0, cost:()=>({}), valid:(x)=>x.t==='C' && !!x.evac, casa:true,
+    apply:(x, i)=>volverACasa(i)},
+  refugio:{cuad:2, cost:()=>({madera:4, piedra:2}), valid:(x)=>x.t==='P' && !hasType(REFUGIO),
+    apply:(x)=>{ x.t=REFUGIO; }},
   reparar:{cuad:1, cost:()=>({madera:2}), valid:(x)=>x.dmg,
     apply:(x)=>{ x.dmg=false; }},
   // T-12: la escalera de la casa. Cada estado es una acción con su coste fijo, para que la tarjeta y la
@@ -52,8 +56,8 @@ export const nombreConstruccion = (id) => t('construcciones.' + id);
 export function costLabel(a) {
   const c = a.cost();
   const parts = Object.keys(c).filter(k => c[k] > 0).map(k => c[k] + ' ' + t('recursos.' + k));
-  parts.push(a.cuad > 1 ? t('ui.variasPersonas', {n: a.cuad}) : t('ui.unaPersona', {n: a.cuad}));
-  return parts.join(' · ');
+  if (a.cuad) parts.push(a.cuad > 1 ? t('ui.variasPersonas', {n: a.cuad}) : t('ui.unaPersona', {n: a.cuad}));
+  return parts.length ? parts.join(' · ') : t('ui.gratis');
 }
 
 const rankBuild = (w) => w.of === 'albanil' ? 0 : (['peon','bombero','medico'].includes(w.of) ? 1 : 2);
@@ -87,8 +91,8 @@ export function costLabelObra(clave) {
   const a = ACTIONS[clave];
   const c = planObra(clave).coste;
   const parts = Object.keys(c).filter(k => c[k] > 0).map(k => c[k] + ' ' + t('recursos.' + k));
-  parts.push(a.cuad > 1 ? t('ui.variasPersonas', {n: a.cuad}) : t('ui.unaPersona', {n: a.cuad}));
-  return parts.join(' · ');
+  if (a.cuad) parts.push(a.cuad > 1 ? t('ui.variasPersonas', {n: a.cuad}) : t('ui.unaPersona', {n: a.cuad}));
+  return parts.length ? parts.join(' · ') : t('ui.gratis');
 }
 
 // Construye la acción elegida (G.sel) en la casilla i. Deja en G.msg lo que ha pasado.
@@ -106,7 +110,7 @@ export function doAction(i) {
   const id = construccion(G.sel, x);
   a.apply(x, i);
   G.stats.builds[id] = (G.stats.builds[id] || 0) + 1;
-  G.msg = t('msg.hecho', {obra: nombreConstruccion(id), quien: crew.map(w => w.name).join(t('ui.y'))}) + note;
+  G.msg = crew.length ? t('msg.hecho', {obra: nombreConstruccion(id), quien: crew.map(w => w.name).join(t('ui.y'))}) + note : t('msg.hechoSolo', {obra: nombreConstruccion(id)});
   if (freeWorkers().length < 1) G.sel = null;
   return true;
 }

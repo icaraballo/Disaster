@@ -9,7 +9,7 @@ import { TEMPORADA, VECINOS_MINIMOS, MEDALLA_PLATA, MEDALLA_ORO } from '../../da
 import { cap, esc, ao, pl, todayKey } from '../util.js';
 import { t } from '../i18n.js';
 import { G, T, townName, ofName, aytoDown, granjasOk, availableWorkers, freeWorkers, W } from '../estado.js';
-import { familias } from '../casas.js';
+import { familias, costeRefugio, plazasUsadas, plazasRefugio, refugioOk, idxRefugio } from '../casas.js';
 import { ACTIONS, costLabel, costLabelObra, planObra, construccion, nombreConstruccion } from '../acciones.js';
 import { production } from '../turnos.js';
 import { riskMap, tileRisks, tileState } from '../riesgo.js';
@@ -125,6 +125,8 @@ function warnings() {
   if (G.dry) w.push(u('warn.seca'));
   if (G.dryFarm) w.push(u('warn.granjas'));
   if (G.cheapDique) w.push(u('warn.constructor'));
+  if (plazasUsadas()) { const c = G.tiles.reduce((s, x) => s + (x.evac ? costeRefugio(x) : 0), 0); w.push(u(c ? 'warn.refugio' : 'warn.refugioPagado', {n: plazasUsadas(), total: plazasRefugio(), comida: c})); }
+  if (idxRefugio() >= 0 && !refugioOk()) w.push(u('warn.refugioDanado'));
   const inj = G.workers.filter(v => v.inj && !v.gone);
   if (inj.length) w.push(u(G.alc === 'enfermera' ? 'warn.heridosEnfermera' : 'warn.heridos', {a: inj.length > 1 ? 'os' : ao(inj[0]), nombres: inj.map(v => v.name).join(', ')}));
   const des = G.desanimados.map(W).filter(Boolean);
@@ -210,7 +212,7 @@ function menuHTML() {
   h += '<button class="btn ghost" data-go="daily">' + u('menu.reto') + '<small>' + u('menu.retoSub', {pueblo: t('pueblos.' + dTown + '.nombre'), alcalde: tituloAlc(dAlc)}) + '</small></button>';
   h += ranking();
   h += '<button class="btn ghost" data-go="howto">' + u(UI.howto ? 'menu.ocultarReglas' : 'menu.comoSeJuega') + '</button>';
-  if (UI.howto) h += '<div class="card"><ul class="rules">' + ['aviso','prep','ojo','impacto','casas','entre','pierdes','medallas'].map(k => '<li>' + u('reglas.' + k, {n: VECINOS_MINIMOS, plata: MEDALLA_PLATA.vecinos, plataMoral: MEDALLA_PLATA.moral, oro: MEDALLA_ORO.vecinos, oroMoral: MEDALLA_ORO.moral}) + '</li>').join('') + '</ul></div>';
+  if (UI.howto) h += '<div class="card"><ul class="rules">' + ['aviso','prep','ojo','impacto','casas','refugio','entre','pierdes','medallas'].map(k => '<li>' + u('reglas.' + k, {n: VECINOS_MINIMOS, plata: MEDALLA_PLATA.vecinos, plataMoral: MEDALLA_PLATA.moral, oro: MEDALLA_ORO.vecinos, oroMoral: MEDALLA_ORO.moral}) + '</li>').join('') + '</ul></div>';
   const nT = Object.keys(TOWNS).filter(unlockedTown).length, nA = ALCALDES.filter(unlockedAlc).length;
   h += '<div class="card" style="display:flex;flex-direction:column;gap:10px"><div class="label">' + u('menu.progreso') + '</div><div style="font-size:14px;line-height:1.5">' + u('menu.progresoDatos', {pueblos: nT, pueblosTotal: Object.keys(TOWNS).length, alcaldes: nA, alcaldesTotal: ALCALDES.length, temporadas: PROG.seasons, mejor: PROG.best || 0}) + '</div>' +
     '<label class="toggle"><input type="checkbox" data-test="1"' + (PROG.test ? ' checked' : '') + '> ' + u('menu.modoPrueba') + '</label></div>';

@@ -1,17 +1,23 @@
-// Las casas y sus familias (T-12). Sin pantalla.
+// Las casas, sus familias y el refugio (T-12, revisado el 21-11 con Iñigo). Sin pantalla.
 //
 // Escalera de una casa:  BIEN ─(le da un desastre)─► DAÑADA ─(1 desastre sin reparar)─► RUINAS ─(otro)─► SOLAR
-//   - Casa (C): x.dmg dice si está dañada; x.propia, si su familia vive en ella; x.huespedes, las casas
-//     de origen de las familias acogidas (como mucho FAMILIAS_POR_CASA familias en total).
-//   - Ruinas (U): x.acogidaEn es la casa donde vive ahora su familia (null si la familia se ha ido).
-//   - Solar vacío (V) y terraplén (E): sin familia. Ruinas, solar y terraplén no son edificios.
-// Las familias son un número fijo de vecinos cada una (data/balance.js), no G.res.pop / casas.
-import { FAMILIAS_POR_CASA, VECINOS_FAMILIA_SE_VA, MORAL_RUINAS } from '../data/balance.js';
+//   - Dañada: la familia sigue en casa; baja la moral, no los vecinos (los vecinos sólo bajan cuando
+//     una familia se va del pueblo).
+//   - Ruinas: la familia se muda a una casa de acogida; si no hay sitio, se va del pueblo. Las familias
+//     que estaban acogidas en esa casa se van del pueblo.
+//   - Solar: no pasa nada más; la familia sigue acogida esperando y reconstruir la devuelve a casa.
+//   - Casa (C): x.dmg dice si está dañada; x.propia, si su familia vive en ella; x.huespedes, el origen
+//     de las familias acogidas (como mucho FAMILIAS_POR_CASA familias en total).
+//   - Ruinas (U) y solar (V): x.acogidaEn es la casa donde espera su familia (null si se fue).
+//   - Terraplén (E): sin familia. Ruinas, solar y terraplén no son edificios.
+// Refugio (H): evacuar lleva a las familias de una casa al refugio hasta que vuelvan; cada desastre
+// allí cuesta más comida (1, 2, 3… por familia). x.evac, x.evacN (desastres pagados), x.evacPagado.
+import { FAMILIAS_POR_CASA, VECINOS_FAMILIA_SE_VA, MORAL_RUINAS, MORAL_FAMILIA_SE_VA, REFUGIO_PLAZAS } from '../data/balance.js';
 import { clamp, cheb, cap } from './util.js';
 import { G, T } from './estado.js';
 import { t } from './i18n.js';
 
-export const RUINAS = 'U', SOLAR = 'V', TERRAPLEN = 'E';
+export const RUINAS = 'U', SOLAR = 'V', TERRAPLEN = 'E', REFUGIO = 'H';
 
 export const familias = (x) => x.t === 'C' ? (x.propia ? 1 : 0) + (x.huespedes ? x.huespedes.length : 0) : 0;
 export const casaSana = (x) => x.t === 'C' && !x.dmg;
@@ -41,43 +47,44 @@ function casaConSitio(desde) {
   return c.length ? c[0] : null;
 }
 
-// Tu gente de la familia de `origen` (la que vivía en esa casa) se muda a `destino`, o se realoja si
-// la familia se ha ido del pueblo (decidido para la v4: tu gente no se va con su familia).
+// Tu gente de la familia de `origen` se muda a `destino`, o se realoja si la familia se ha ido del
+// pueblo (decidido para la v4: tu gente no se va con su familia).
 function moverGente(origen, destino) {
   G.workers.filter(w => !w.gone && w.familia === origen).forEach(w => {
     if (destino != null) { w.home = destino; return; }
-    w.familia = null; w.home = casaConSitio(w.home == null ? origen : w.home);
+    w.familia = null; w.home = casaConSitio(w.home == null || w.home < 0 ? 0 : w.home);
   });
 }
 
-// La familia acogida que vive en `casa` y viene de `origen` se va del pueblo para siempre.
-function seVaAcogida(casa, origen, ev) {
+// Una familia se va del pueblo para siempre.
+function seVa() {
+  G.res.pop -= VECINOS_FAMILIA_SE_VA;
+  G.res.moral = clamp(G.res.moral - MORAL_FAMILIA_SE_VA, 0, 100);
+  G.stats.familias = (G.stats.familias || 0) + 1;
+}
+
+// La familia acogida en `casa` que viene de `origen` se va del pueblo.
+function seVaAcogida(casa, origen) {
   const x = T(casa);
   x.huespedes = x.huespedes.filter(o => o !== origen);
-  if (T(origen) && T(origen).t === RUINAS) T(origen).acogidaEn = null;
-  G.res.pop -= VECINOS_FAMILIA_SE_VA;
-  G.stats.familias = (G.stats.familias || 0) + 1;
+  if (T(origen) && (T(origen).t === RUINAS || T(origen).t === SOLAR)) T(origen).acogidaEn = null;
+  seVa();
   moverGente(origen, null);
   return {text: t('log.acogidaSeVa', {lugar: nombreCasa(casa), n: VECINOS_FAMILIA_SE_VA}), kind: 'bad', tiles: [[casa, 'dmg']]};
 }
 
-// Al dañarse una casa con familias acogidas, éstas se van del pueblo (el golpe doble).
-export function seVanAcogidas(i, ev) {
-  const x = T(i);
-  (x.huespedes || []).slice().forEach(o => ev.push(seVaAcogida(i, o, ev)));
-}
-
-// La casa i (dañada) pasa a ruinas: su familia se muda a una casa de acogida o, sin sitio, se va.
+// La casa i cae en ruinas: las familias acogidas en ella se van del pueblo; su familia se muda a una
+// casa de acogida o, sin sitio, se va.
 export function aRuinas(i, ev) {
   const x = T(i), nm = nombreCasa(i);
-  // las familias acogidas que hubiera aquí ya se fueron al dañarse la casa; por si acaso:
-  seVanAcogidas(i, ev);
-  const habia = x.propia;
-  x.t = RUINAS; x.dmg = false; x.propia = false; x.huespedes = []; x.acogidaEn = null;
-  x.evac = false;
+  const habia = x.propia, huespedes = (x.huespedes || []).slice();
+  if (x.evac) volverACasa(i);
   ev.push({text: t('log.aRuinas', {lugar: cap(nm)}), kind: 'bad', tiles: [[i, 'ruinas']]});
-  if (!habia) return;
+  huespedes.forEach(o => ev.push(seVaAcogida(i, o)));
+  x.t = RUINAS; x.dmg = false; x.propia = false; x.huespedes = []; x.acogidaEn = null;
+  if (!habia && !huespedes.length) return;
   G.res.moral = clamp(G.res.moral - MORAL_RUINAS, 0, 100);
+  if (!habia) return;
   const dest = elegirAcogida(i);
   if (dest != null) {
     const nombre = nombreCasa(dest);   // antes de mudar a nadie, para que no se llame como quien llega
@@ -85,31 +92,21 @@ export function aRuinas(i, ev) {
     moverGente(i, dest);
     ev.push({text: t('log.familiaAcogida', {lugar: nombre}), kind: 'warn', tiles: [[dest, 'acogida']]});
   } else {
-    G.res.pop -= VECINOS_FAMILIA_SE_VA;
-    G.stats.familias = (G.stats.familias || 0) + 1;
+    seVa();
     moverGente(i, null);
     ev.push({text: t('log.familiaSinSitio', {n: VECINOS_FAMILIA_SE_VA}), kind: 'bad'});
   }
 }
 
-// Las ruinas i pasan a solar vacío: la familia acogida se cansa de esperar y se va del pueblo.
+// Las ruinas i pasan a solar: la familia sigue acogida esperando; reconstruir costará más.
 export function aSolar(i, ev) {
-  const x = T(i), dest = x.acogidaEn;
-  x.t = SOLAR; x.acogidaEn = null;
-  ev.push({text: t('log.aSolar'), kind: 'bad', tiles: [[i, 'solar']]});
-  if (dest != null && T(dest).t === 'C' && (T(dest).huespedes || []).includes(i)) {
-    T(dest).huespedes = T(dest).huespedes.filter(o => o !== i);
-    G.res.pop -= VECINOS_FAMILIA_SE_VA;
-    G.stats.familias = (G.stats.familias || 0) + 1;
-    moverGente(i, null);
-    ev.push({text: t('log.familiaCansada', {lugar: nombreCasa(dest), n: VECINOS_FAMILIA_SE_VA}), kind: 'bad', tiles: [[dest, 'dmg']]});
-  }
+  T(i).t = SOLAR;
+  ev.push({text: t('log.aSolar'), kind: 'warn', tiles: [[i, 'solar']]});
 }
 
-// Reparar las ruinas i: vuelve a ser una casa y su familia (si sigue en el pueblo) vuelve.
-export function repararRuinas(i) {
-  const x = T(i), dest = x.acogidaEn;
-  x.t = 'C'; x.dmg = false; x.huespedes = []; x.propia = false; x.acogidaEn = null;
+// La familia que esperaba en otra casa vuelve a la suya (al reparar las ruinas o reconstruir el solar).
+function vuelveFamilia(i, dest) {
+  const x = T(i);
   if (dest != null && T(dest).t === 'C' && (T(dest).huespedes || []).includes(i)) {
     T(dest).huespedes = T(dest).huespedes.filter(o => o !== i);
     x.propia = true;
@@ -117,10 +114,16 @@ export function repararRuinas(i) {
   }
 }
 
-// Reconstruir el solar i: una casa nueva, vacía (no vuelve nadie).
+// Reparar las ruinas i: vuelve a ser una casa y su familia (si sigue en el pueblo) vuelve.
+export function repararRuinas(i) {
+  const x = T(i), dest = x.acogidaEn;
+  x.t = 'C'; x.dmg = false; x.huespedes = []; x.propia = false; x.acogidaEn = null;
+  vuelveFamilia(i, dest);
+}
+
+// Reconstruir el solar i: una casa nueva. Si su familia esperaba acogida, vuelve; si no, queda vacía.
 export function reconstruir(i) {
-  const x = T(i);
-  x.t = 'C'; x.dmg = false; x.propia = false; x.huespedes = []; x.acogidaEn = null;
+  repararRuinas(i);
 }
 
 // Terraplén en las ruinas o el solar i: la casa desaparece para siempre; su familia se queda acogida.
@@ -129,26 +132,55 @@ export function terraplen(i) {
   x.t = TERRAPLEN; x.acogidaEn = null; x.sacos = false;
 }
 
-// Lo que pasa al final del impacto (T-12 §B.2 y §B.4), con lo que estaba dañado o en ruinas al empezar.
-//   inicio: {danadas: [casas dañadas], otros: [otros edificios dañados], ruinas: [ruinas]}
-export function finDeImpacto(inicio, ev, MORAL) {
-  // 1. Lo que sigue dañado sin reparar desde antes de este impacto pesa en la moral.
-  let pierde = 0;
-  inicio.danadas.forEach(i => { const x = T(i); if (x.t === 'C' && x.dmg) pierde += MORAL.porFamilia * familias(x); });
-  inicio.otros.forEach(i => { if (T(i).dmg) pierde += MORAL.otroEdificio; });
-  if (pierde) { G.res.moral = clamp(G.res.moral - pierde, 0, 100); ev.push({text: t('log.sinReparar', {n: pierde}), kind: 'cascade'}); }
-  // 2. Las casas que siguen dañadas pasan a ruinas.
+// ---------- el refugio ----------
+export const idxRefugio = () => G.tiles.findIndex(x => x.t === REFUGIO);
+export const refugioOk = () => { const i = idxRefugio(); return i >= 0 && !G.tiles[i].dmg; };
+export const plazasUsadas = () => G.tiles.reduce((s, x) => s + (x.evac ? familias(x) : 0), 0);
+export const plazasRefugio = () => REFUGIO_PLAZAS + (G.alc === 'enfermera' ? 1 : 0);   // la enfermera: una plaza más
+export const plazasLibres = () => refugioOk() ? plazasRefugio() - plazasUsadas() : 0;
+// Lo que costará en comida el próximo desastre de la casa evacuada i (1, 2, 3… por familia).
+// (con el agricultor, la mitad: comen de los huertos del pueblo)
+const tarifa = (x) => { const c = (x.evacN + 1) * familias(x); return G.alc === 'agricultor' ? Math.ceil(c / 2) : c; };
+export const costeRefugio = (x) => x.evacPagado ? 0 : tarifa(x);
+
+export function evacuarCasa(i) {
+  const x = T(i);
+  x.evac = true; x.evacN = 1; x.evacPagado = true;   // al entrar se paga el primer desastre
+}
+export function volverACasa(i) {
+  const x = T(i);
+  x.evac = false; x.evacN = 0; x.evacPagado = false;
+}
+// Al empezar un impacto: cada familia evacuada paga su estancia; sin comida, vuelve a casa.
+export function cobrarRefugio(ev) {
+  G.tiles.forEach((x, i) => {
+    if (!x.evac) return;
+    if (x.evacPagado) { x.evacPagado = false; return; }
+    const c = tarifa(x);
+    if (G.res.comida >= c) { G.res.comida -= c; x.evacN++; ev.push({text: t('log.refugioPaga', {lugar: nombreCasa(i), n: c}), kind: 'info'}); }
+    else { volverACasa(i); ev.push({text: t('log.refugioSinComida', {lugar: nombreCasa(i)}), kind: 'bad', tiles: [[i, 'ok']]}); }
+  });
+}
+// Si el refugio se daña, todas las familias vuelven a casa.
+export function vaciarRefugio(ev) {
+  let n = 0;
+  G.tiles.forEach((x, i) => { if (x.evac) { volverACasa(i); n++; } });
+  if (n) ev.push({text: t('log.refugioVacio', {n}), kind: 'cascade'});
+}
+
+// Lo que pasa al final del impacto (T-12 §B.2), con lo que estaba dañado o en ruinas al empezar.
+export function finDeImpacto(inicio, ev) {
+  // 1. Las casas que siguen dañadas desde antes de este impacto caen en ruinas.
   inicio.danadas.forEach(i => { const x = T(i); if (x.t === 'C' && x.dmg) aRuinas(i, ev); });
-  // 3. Las ruinas de antes de este impacto pasan a solar.
+  // 2. Las ruinas de antes de este impacto pasan a solar.
   inicio.ruinas.forEach(i => { if (T(i).t === RUINAS) aSolar(i, ev); });
 }
 
 export function fotoInicio() {
-  const danadas = [], otros = [], ruinas = [];
+  const danadas = [], ruinas = [];
   G.tiles.forEach((x, i) => {
     if (x.t === 'C' && x.dmg) danadas.push(i);
     else if (x.t === RUINAS) ruinas.push(i);
-    else if (x.dmg) otros.push(i);
   });
-  return {danadas, otros, ruinas};
+  return {danadas, ruinas};
 }

@@ -10,7 +10,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { cargarTextosDeDisco } from './bots.mjs';
 import { TOWNS } from '../data/pueblos.js';
-import { VECINOS_CASA_DANADA, VECINOS_FAMILIA_SE_VA, VECINOS_EVACUADA, MORAL_RUINAS, MORAL_SIN_REPARAR,
+import { VECINOS_CASA_DANADA, VECINOS_FAMILIA_SE_VA, MORAL_RUINAS, MORAL_DANO_CASA, MORAL_DANO_EDIFICIO, REFUGIO_PLAZAS,
   MEDALLA_PLATA, MEDALLA_ORO, TEMPORADA } from '../data/balance.js';
 import { mulberry32, inyectarAzar, RS } from '../js/azar.js';
 import { G, T, peligro } from '../js/estado.js';
@@ -18,8 +18,9 @@ import { newGame, newForecast } from '../js/partida.js';
 import { doAction } from '../js/acciones.js';
 import { endTurn } from '../js/turnos.js';
 import { RESOLVE, startImpact, damage, detras } from '../js/desastres.js';
-import { riskFor } from '../js/riesgo.js';
-import { familias, elegirAcogida, fotoInicio, finDeImpacto, RUINAS, SOLAR, TERRAPLEN } from '../js/casas.js';
+import { riskFor, riesgoHabitual } from '../js/riesgo.js';
+import { familias, elegirAcogida, fotoInicio, finDeImpacto, aRuinas, cobrarRefugio, RUINAS, SOLAR, TERRAPLEN, REFUGIO } from '../js/casas.js';
+import { EVENTS } from '../js/mejoras.js';
 import { medalla } from '../js/temporada.js';
 import { mergeProg } from '../js/progreso.js';
 import { t } from '../js/i18n.js';
@@ -46,31 +47,36 @@ const textos = (ev) => ev.map(e => e.text).join(' | ');
 const construir = (k, i) => { G.sel = k; const ok = doAction(i); G.sel = null; return ok; };
 
 // ---------- 1. escalera ----------
-test('escalera: sana → dañada → ruinas (tras un desastre sin reparar) → solar', () => {
+test('escalera: sana → dañada → ruinas (tras un desastre sin reparar) → solar; en solar la familia sigue esperando', () => {
   nueva();
   damage(17, 'rayo', ctx());
   assert.equal(T(17).t, 'C'); assert.ok(T(17).dmg, 'golpeada queda dañada');
+  assert.ok(T(17).propia, 'la familia sigue en casa');
   impactoTranquilo();
   assert.equal(T(17).t, RUINAS, 'un desastre sin reparar: ruinas');
+  const acogida = T(17).acogidaEn;
+  assert.ok(acogida != null);
+  const pop = G.res.pop;
   impactoTranquilo();
   assert.equal(T(17).t, SOLAR, 'otro desastre: solar');
+  assert.equal(T(17).acogidaEn, acogida, 'la familia sigue acogida esperando');
+  assert.equal(G.res.pop, pop, 'nadie se va por quedar en solar');
 });
 
 test('escalera: dañada y golpeada otra vez pasa a ruinas una sola vez', () => {
   nueva();
   damage(17, 'rayo', ctx()); damage(17, 'rayo', ctx());
   assert.equal(T(17).t, RUINAS, 'sana golpeada dos veces en el mismo impacto: ruinas');
-  // dañada al empezar el impacto y golpeada durante él: ruinas, y «sigue dañada» no la sube a solar
   nueva();
   T(17).dmg = true;
   const inicio = fotoInicio();
   damage(17, 'rayo', ctx());
   assert.equal(T(17).t, RUINAS);
-  finDeImpacto(inicio, [], MORAL_SIN_REPARAR);
+  finDeImpacto(inicio, []);
   assert.equal(T(17).t, RUINAS, 'un solo escalón');
 });
 
-test('reparar ruinas devuelve a la familia; reconstruir el solar deja la casa vacía', () => {
+test('reparar ruinas y reconstruir el solar devuelven a la familia; sin familia, la casa queda vacía', () => {
   nueva();
   T(17).dmg = true; impactoTranquilo();
   const acogida = T(17).acogidaEn;
@@ -79,9 +85,15 @@ test('reparar ruinas devuelve a la familia; reconstruir el solar deja la casa va
   assert.ok(construir('repararRuinas', 17));
   assert.equal(T(17).t, 'C'); assert.ok(T(17).propia, 'la familia vuelve a casa');
   assert.ok(!T(acogida).huespedes.includes(17), 'la casa de acogida queda libre');
-  T(18).t = SOLAR; G.busy = [];
+  nueva();
+  T(17).dmg = true; impactoTranquilo(); impactoTranquilo();
+  assert.equal(T(17).t, SOLAR);
+  G.phase = 'prep'; G.turn = 1; G.busy = [];
+  assert.ok(construir('reconstruir', 17));
+  assert.ok(T(17).propia, 'reconstruir el solar devuelve a la familia que esperaba');
+  T(18).t = SOLAR; T(18).acogidaEn = null; G.busy = [];
   assert.ok(construir('reconstruir', 18));
-  assert.equal(T(18).t, 'C'); assert.equal(familias(T(18)), 0, 'la casa reconstruida está vacía');
+  assert.equal(familias(T(18)), 0, 'sin familia esperando, la casa queda vacía');
 });
 
 // ---------- 2. acogida ----------
@@ -97,45 +109,39 @@ test('acogida: primero una casa vacía, si no la más cercana con una familia; c
   assert.equal(elegirAcogida(17), null, 'sin sitio en ninguna casa');
 });
 
-test('acogida: sin sitio la familia se va (−5); en solar la familia acogida se va (−5)', () => {
+test('acogida: sin sitio la familia se va del pueblo (−5 vecinos)', () => {
   nueva();
   G.tiles.forEach((x, i) => { if (x.t === 'C' && i !== 17) x.huespedes = [99]; });
   T(17).dmg = true;
-  let pop = G.res.pop; impactoTranquilo();
+  const pop = G.res.pop; impactoTranquilo();
   assert.equal(G.res.pop, pop - VECINOS_FAMILIA_SE_VA);
-  nueva();
-  T(17).dmg = true; impactoTranquilo();
-  pop = G.res.pop; impactoTranquilo();
-  assert.equal(T(17).t, SOLAR);
-  assert.equal(G.res.pop, pop - VECINOS_FAMILIA_SE_VA, 'la familia se cansa de esperar');
 });
 
-test('acogida: el golpe doble y la evacuación', () => {
+test('acogida: si la casa de acogida se daña las dos familias siguen; si cae en ruinas, la acogida se va y la dueña busca otra', () => {
   nueva();
   T(17).dmg = true; impactoTranquilo();
-  const h = T(17).acogidaEn; let pop = G.res.pop;
-  const ev = damage(h, 'rayo', ctx());
-  // T-12 §B.4 lo daba como −2 −5 = −7 con los números de partida; con los de la v4 es −4 −5.
-  assert.equal(G.res.pop, pop - VECINOS_CASA_DANADA - VECINOS_FAMILIA_SE_VA, textos(ev));
-  assert.equal(familias(T(h)), 1, 'la familia acogida se ha ido');
-  assert.equal(T(17).acogidaEn, null);
-  nueva();
-  T(17).dmg = true; impactoTranquilo();
-  const h2 = T(17).acogidaEn; T(h2).evac = true; pop = G.res.pop; G.res.heridos = 0;
-  damage(h2, 'rayo', ctx());
-  assert.equal(G.res.pop, pop - VECINOS_EVACUADA, 'evacuada: sólo se pierde lo de la evacuación');
-  assert.equal(G.res.heridos, 0, 'evacuada: nadie herido');
-  assert.equal(familias(T(h2)), 2, 'la familia acogida no se va');
+  const h = T(17).acogidaEn;
+  let pop = G.res.pop;
+  damage(h, 'rayo', ctx());
+  assert.equal(G.res.pop, pop - VECINOS_CASA_DANADA, 'dañada: sólo la parte de la familia que se marcha');
+  assert.equal(familias(T(h)), 2, 'las dos familias siguen en la casa');
+  pop = G.res.pop;
+  const ev = []; aRuinas(h, ev);
+  assert.equal(G.res.pop, pop - VECINOS_FAMILIA_SE_VA, 'la familia acogida se va del pueblo: ' + textos(ev));
+  assert.equal(T(17).acogidaEn, null, 'su casa en ruinas ya no espera a nadie');
+  assert.ok(T(h).acogidaEn != null, 'la familia dueña se muda a otra casa');
 });
 
-// ---------- 3. moral por desastre ----------
-test('moral: −2 por familia en casa sin reparar y −1 por otro edificio, sólo si ya estaban dañados', () => {
+// ---------- 3. moral ----------
+test('moral: casa dañada −6 (y −2 vecinos), otro edificio −6, ruinas −10; nada por turno sin reparar', () => {
+  nueva(); let m = G.res.moral, pop = G.res.pop;
+  damage(17, 'rayo', ctx());
+  assert.equal(G.res.moral, m - MORAL_DANO_CASA); assert.equal(G.res.pop, pop - VECINOS_CASA_DANADA);
+  m = G.res.moral; damage(24, 'rayo', ctx());
+  assert.equal(G.res.moral, m - MORAL_DANO_EDIFICIO, 'el ayuntamiento');
   nueva(); impactoTranquilo(); const control = G.res.moral;
   nueva(); T(17).dmg = true; T(41).dmg = true; impactoTranquilo();
-  assert.equal(G.res.moral, control - MORAL_SIN_REPARAR.porFamilia - MORAL_SIN_REPARAR.otroEdificio - MORAL_RUINAS);
-  nueva({ri: 0}); G.fc.real = ['riada']; G.fc.I = 3; startImpact();
-  assert.ok(G.tiles.some(x => x.dmg), 'el impacto ha dañado algo');
-  assert.ok(!G.impact.events.some(e => e.text.startsWith(t('log.sinReparar', {n: 1}).split(':')[0])), 'lo dañado en este impacto no paga todavía');
+  assert.equal(G.res.moral, control - MORAL_RUINAS, 'sólo las ruinas: lo que sigue dañado no cobra por turno');
 });
 
 test('moral: personas desanimadas con 50 y con 30', () => {
@@ -143,6 +149,78 @@ test('moral: personas desanimadas con 50 y con 30', () => {
     nueva(); G.res.moral = moral; newForecast();
     assert.equal(G.desanimados.length, n, `moral ${moral}`);
   }
+});
+
+// ---------- 3b. refugio ----------
+test('refugio: sin él no se evacúa; con él, plazas limitadas', () => {
+  nueva();
+  assert.ok(!construir('evacuar', 17), 'sin refugio no se puede evacuar');
+  assert.ok(construir('refugio', 21));
+  assert.equal(T(21).t, REFUGIO);
+  G.busy = [];
+  const casas = G.tiles.map((x, i) => x.t === 'C' ? i : -1).filter(i => i >= 0);
+  let n = 0; for (const i of casas) { G.busy = []; if (construir('evacuar', i)) n++; }
+  assert.equal(n, REFUGIO_PLAZAS, 'caben ' + REFUGIO_PLAZAS + ' familias');
+});
+
+test('refugio: evacuada no hay heridos ni baja la moral; cada desastre cuesta más; sin comida vuelve a casa', () => {
+  nueva(); construir('refugio', 21); G.busy = [];
+  const comida0 = G.res.comida;
+  assert.ok(construir('evacuar', 17));
+  assert.equal(G.res.comida, comida0 - 1, 'entrar cuesta 1 de comida (el primer desastre)');
+  const m = G.res.moral, pop = G.res.pop; G.res.heridos = 0;
+  damage(17, 'rayo', ctx());
+  assert.equal(G.res.moral, m); assert.equal(G.res.pop, pop); assert.equal(G.res.heridos, 0);
+  T(17).dmg = false;
+  const gasto = [];
+  for (let k = 0; k < 3; k++) { const c = G.res.comida; impactoTranquilo(); gasto.push(c - G.res.comida); }
+  assert.ok(T(17).evac, 'sigue en el refugio');
+  assert.equal(T(17).evacN, 3, 'tres desastres pagados (1 al entrar, luego 2 y 3)');
+  G.res.comida = 0;
+  const ev = []; cobrarRefugio(ev);
+  assert.ok(!T(17).evac, 'sin comida vuelve a casa: ' + textos(ev));
+});
+
+test('refugio: si se daña, las familias vuelven a casa; volver a casa es gratis', () => {
+  nueva(); construir('refugio', 21); G.busy = []; construir('evacuar', 17); G.busy = []; construir('evacuar', 18);
+  damage(21, 'rayo', ctx());
+  assert.ok(!T(17).evac && !T(18).evac);
+  assert.ok(!construir('evacuar', 23), 'con el refugio dañado no se evacúa');
+  T(21).dmg = false; G.busy = []; construir('evacuar', 17);
+  const r = {...G.res}; G.busy = [];
+  assert.ok(construir('volverCasa', 17));
+  assert.deepEqual({...G.res}, r, 'volver no cuesta nada'); assert.ok(!T(17).evac);
+});
+
+// ---------- 3c. eventos ----------
+test('familias que llegan: necesitan una casa con sitio y viven en ella', () => {
+  nueva();
+  const ev = EVENTS.find(e => e.id === 'refugiados');
+  G.tiles.forEach(x => { if (x.t === 'C') x.huespedes = [99]; });
+  assert.ok(!ev.cond(), 'sin casa con sitio no aparece');
+  nueva();
+  const e = ev.mk(), pop = G.res.pop;
+  e.opts[0].a();
+  assert.equal(G.res.pop, pop + VECINOS_FAMILIA_SE_VA);
+  assert.ok(G.tiles.some(x => x.t === 'C' && (x.huespedes || []).some(o => o < 0)), 'vive acogida en una casa');
+});
+
+test('refugio lleno: la familia en peligro pide entrar y eliges a quién mandar a casa', () => {
+  nueva(); G.idx = 2; construir('refugio', 21);
+  const r = riesgoHabitual();
+  const casas = G.tiles.map((x, i) => x.t === 'C' ? i : -1).filter(i => i >= 0).sort((a, b) => r[a] - r[b]);
+  const seguras = casas.slice(0, REFUGIO_PLAZAS), peligro = casas[casas.length - 1];
+  assert.ok(r[peligro] >= 0.25, 'hay una casa en peligro');
+  seguras.forEach(i => { G.busy = []; construir('evacuar', i); });
+  const ev = EVENTS.find(e => e.id === 'refugioLleno');
+  assert.ok(ev.cond());
+  const e = ev.mk();
+  assert.equal(e.opts.length, REFUGIO_PLAZAS + 1, 'una opción por familia de dentro y «no hay sitio»');
+  e.opts[0].a();
+  const dentro = G.tiles.map((x, i) => x.evac ? i : -1).filter(i => i >= 0);
+  assert.equal(dentro.length, REFUGIO_PLAZAS, 'el refugio sigue lleno');
+  assert.ok(dentro.some(i => !seguras.includes(i)), 'entra la familia en peligro');
+  assert.ok(!T(seguras[0]).evac, 'sale la de menos riesgo');
 });
 
 // ---------- 4. agua ----------
@@ -164,8 +242,11 @@ test('agua: el terraplén la frena y empuja el 30 % río abajo (en el mar, nada)
   const ev = []; RESOLVE.riada(3, ev, ctx());
   assert.ok(!T(24).dmg, 'detrás del terraplén no llega');
   assert.ok(!ev.some(e => (e.tiles || []).some(([i, k]) => i === 25 && k === 'flood')), 'el terraplén no se inunda');
-  nueva(); T(25).t = 'P'; const sin = riskFor(['riada'], 3);
-  T(25).t = TERRAPLEN; const con = riskFor(['riada'], 3);
+  // con el peligro del pueblo la riada llega al tope (90 %) y el empuje no se notaría: aquí, peligro 1
+  const pg = TOWNS.villarrio.peligro; TOWNS.villarrio.peligro = 1;
+  nueva(); T(25).t = 'P'; const sin = riskFor(['riada'], 1);
+  T(25).t = TERRAPLEN; const con = riskFor(['riada'], 1);
+  TOWNS.villarrio.peligro = pg;
   const suma = (a) => a.reduce((s, v) => s + v, 0);
   assert.ok(suma(con) > suma(sin), 'río abajo hay más riesgo con el terraplén');
   // en el mar no empuja: Arrieta, un prado junto al mar convertido en terraplén

@@ -53,7 +53,7 @@ test('el descuento del albañil: casos con la ingeniera y albañil libre', () =>
   preparar(3);
   const esperado = {dique: {piedra: 1}, muro: {piedra: 1, madera: 1}, aljibe: {piedra: 2, madera: 2},
     observatorio: {madera: 3, dinero: 30}, pararrayos: {madera: 1, dinero: 15}, reparar: {madera: 1},
-    sacos: {dinero: 8}, cortafuegos: {}, evacuar: {comida: 2}};
+    sacos: {dinero: 8}, cortafuegos: {}, evacuar: {comida: 1}};
   for (const [k, c] of Object.entries(esperado)) {
     G.workers.forEach(w => { w.inj = 0; });
     const plan = planObra(k);

@@ -7,6 +7,7 @@
   "scripts": {
     "test": "node tests/ejecutar.mjs",
     "simular": "node tools/simular.mjs",
+    "estrategias": "node tools/estrategias.mjs",
     "serve": "python3 -m http.server 8765"
   }
 }

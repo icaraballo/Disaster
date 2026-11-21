@@ -18,7 +18,7 @@ import { changeJob, endTurn } from '../js/turnos.js';
 import { toResult, choosePerk, chooseEvent, finish } from '../js/temporada.js';
 import { riskMap } from '../js/riesgo.js';
 import { cheb, nb4 } from '../js/util.js';
-import { RUINAS, SOLAR, familias } from '../js/casas.js';
+import { RUINAS, SOLAR, REFUGIO, familias, plazasLibres, costeRefugio } from '../js/casas.js';
 import { pasaAgua } from '../js/riesgo.js';
 
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -47,7 +47,7 @@ const MEJORAS_ORDEN = ['bomba', 'bomberos', 'radar', 'muros', 'voluntarios', 'ob
 const EVENTO_ELIGE = {
   constructor: () => 1, fiestas: () => G.res.moral < 60 ? 0 : 1, refugiados: () => G.res.comida >= 14 ? 0 : 1,
   mercado: (n) => (G.res.comida < 12 && n > 2 ? 1 : n - 1), bosqueviejo: () => 1, periodista: () => G.res.moral < 50 ? 1 : 0,
-  hospital: () => 0, miedo: () => 0, montaneros: () => 0, subvencion: () => 0
+  hospital: () => 0, miedo: () => 0, montaneros: () => 0, subvencion: () => 0, refugioLleno: () => 0
 };
 
 // opc (para el «medio»): olvido = probabilidad de saltarse una obra; sinEvacuar; sinObservatorio.
@@ -64,50 +64,72 @@ export function listo(seed, opc = {}) {
   const pct = (k) => (G.fc.real.includes(k) ? G.fc.pReal : 0) + (G.fc.decoy.includes(k) ? 100 - G.fc.pReal : 0);
   const ultimo = () => G.turn >= G.maxTurns;
   const hay = (k) => (G.fc.real.includes(k) || G.fc.decoy.includes(k)) && (opc.impaciente || ultimo() || pct(k) >= (opc.umbral || 70));
+  // Lo permanente (diques, pararrayos, muros, cortafuegos) sirve toda la temporada: se construye en
+  // cuanto puede hacer falta, sin esperar. Sólo lo que se gasta (sacos, evacuar) espera a la previsión.
+  const puede = (k) => G.fc.real.includes(k) || G.fc.decoy.includes(k);
 
   function proteger() {
     const heat = riskMap();
     const edif = G.tiles.map((x, i) => i).filter(i => BUILD.has(T(i).t)).sort((a, b) => heat[b] - heat[a]);
-    // 1. reparar lo dañado, primero las casas con más familias (si no, caen en ruinas)
+    // 1. reparar lo dañado, primero las casas con más familias (si no, caen en ruinas).
+    //    El que sacrifica casas sólo repara los demás edificios.
     const prioridad = (i) => (T(i).t === 'C' ? 10 * familias(T(i)) : 5) + heat[i];
-    [...edif].sort((a, b) => prioridad(b) - prioridad(a)).forEach(i => { if (T(i).dmg && G.res.madera >= 2) construir('reparar', i); });
-    // 1b. ruinas y solares: terraplén junto al agua, reparar las ruinas lejos; sacos de parche si no llega
+    [...edif].sort((a, b) => prioridad(b) - prioridad(a)).forEach(i => {
+      if (T(i).dmg && G.res.madera >= 2 && !(opc.sinReparar && T(i).t === 'C')) construir('reparar', i);
+    });
+    // 1b. ruinas y solares: terraplén junto al agua; lejos, reparar las ruinas o reconstruir el solar si
+    //     su familia espera acogida; sacos de parche si no llega para más
     const junto = (i) => nb4(i).some(j => T(j).t === 'R' || T(j).t === 'M');
     G.tiles.forEach((x, i) => {
       if (x.t !== RUINAS && x.t !== SOLAR) return;
-      if (junto(i)) {
+      if (junto(i) && (opc.terraplenSiempre || !opc.gente)) {
         if (x.t === RUINAS && G.res.madera >= 2) { if (construir('terraplen', i)) return; }
         if (x.t === SOLAR && G.res.madera >= 2 && G.res.piedra >= 2) { if (construir('terraplenSolar', i)) return; }
         if (pasaAgua(i).some(j => BUILD.has(T(j).t)) && G.res.dinero >= 8 && (hay('riada') || hay('temporal'))) construir('sacos', i);
-      } else if (x.t === RUINAS && x.acogidaEn != null && G.res.madera >= 4) construir('repararRuinas', i);
+      } else if (!opc.sinReparar && x.acogidaEn != null) {
+        if (x.t === RUINAS && G.res.madera >= 4) construir('repararRuinas', i);
+        if (x.t === SOLAR && G.res.madera >= 4 && G.res.piedra >= 2) construir('reconstruir', i);
+      }
     });
-    // 2. observatorio si se puede (mejora la previsión)
+    // 2. el refugio (sin él no se puede evacuar), en el prado con menos riesgo
+    if (!opc.sinRefugio && !G.tiles.some(x => x.t === REFUGIO) && G.res.madera >= 4 && G.res.piedra >= 2 && libres() >= 2) {
+      const prados = G.tiles.map((x, i) => i).filter(i => T(i).t === 'P' && !junto(i));
+      if (prados.length) construir('refugio', prados[Math.floor(R() * prados.length)]);
+    }
+    // 2b. observatorio si se puede (mejora la previsión)
     if (!opc.sinObservatorio && G.res.madera >= 4 && G.res.dinero >= 30 + 15) {
       const prados = G.tiles.map((x, i) => i).filter(i => T(i).t === 'P');
       if (prados.length && libres() >= 2) construir('observatorio', prados[Math.floor(R() * prados.length)]);
     }
-    // 2b. evacuar las casas amenazadas (una casa evacuada no pierde vecinos ni deja heridos)
-    // (primero la casa con 2 familias: si se daña, la acogida se va del pueblo)
-    if (!opc.sinEvacuar && (opc.impaciente || ultimo())) edif.filter(i => T(i).t === 'C' && familias(T(i)) > 0 && heat[i] >= 0.1)
-      .sort((a, b) => familias(T(b)) * heat[b] - familias(T(a)) * heat[a]).slice(0, 6).forEach(i => { if (G.res.comida >= 6) construir('evacuar', i); });
+    // 2c. el refugio en el último turno: a casa las familias que ya no corren peligro (cada desastre allí
+    //     cuesta más), y dentro las que más (primero la casa con 2 familias)
+    if (!opc.sinEvacuar && (opc.impaciente || ultimo())) {
+      const umbral = opc.gente ? 0.06 : 0.12;
+      G.tiles.forEach((x, i) => { if (x.evac && (heat[i] < umbral || costeRefugio(x) > 3)) construir('volverCasa', i); });
+      edif.filter(i => T(i).t === 'C' && familias(T(i)) > 0 && heat[i] >= umbral)
+        .sort((a, b) => familias(T(b)) * heat[b] - familias(T(a)) * heat[a])
+        .forEach(i => { if (G.res.comida >= familias(T(i)) + 6 && plazasLibres() >= familias(T(i))) construir('evacuar', i); });
+    }
     const peligrosos = edif.filter(i => heat[i] >= 0.12).slice(0, 8);
     // 3. proteger según lo que viene
-    if (hay('riada') || hay('temporal')) {
+    if ((hay('riada') || hay('temporal')) && !opc.sinDiques) {
       peligrosos.forEach(i => { if (G.res.dinero >= 8) construir('sacos', i); });
-      for (let k = 0; k < 2; k++) {
+    }
+    if ((puede('riada') || puede('temporal')) && !opc.sinDiques) {
+      for (let k = 0; k < (opc.muros ? 4 : 2); k++) {
         const agua = G.tiles.map((x, i) => i).filter(i => (T(i).t === 'R' || T(i).t === 'M') && !T(i).dique);
         if (G.res.piedra < 2 || !agua.length) break;
         const puntua = (i) => [i - 7, i + 7, i - 1, i + 1].reduce((s, j) => s + (heat[j] || 0), 0);
         const mejor = agua.sort((a, b) => puntua(b) - puntua(a))[0];
-        if (puntua(mejor) > 0.25) construir('dique', mejor); else break;
+        if (puntua(mejor) > (opc.muros ? 0.1 : 0.25)) construir('dique', mejor); else break;
       }
     }
-    if (hay('incendio')) {
+    if (puede('incendio')) {
       const bosques = G.tiles.map((x, i) => i).filter(i => T(i).t === 'B');
       const junto = (i) => edif.some(e => Math.max(Math.abs(Math.floor(e / 7) - Math.floor(i / 7)), Math.abs(e % 7 - i % 7)) === 1);
       bosques.filter(junto).slice(0, 2).forEach(i => construir('cortafuegos', i));
     }
-    if (hay('tormenta')) {
+    if (puede('tormenta')) {
       // varios pararrayos, cada uno donde más edificios sin cubrir tiene al lado
       for (let k = 0; k < 3 && G.res.madera >= 2 && G.res.dinero >= 15; k++) {
         const cubierto = (i) => G.tiles.some((u, j) => u.rayo && cheb(i, j) <= 1);
@@ -118,7 +140,7 @@ export function listo(seed, opc = {}) {
         if (!mejor || !construir('pararrayos', mejor)) break;
       }
     }
-    if (hay('alud')) {
+    if (puede('alud') || (opc.muros && G.NIEVE.length)) {
       const nieve = G.NIEVE.filter(i => !T(i).muro);
       if (nieve.length && G.res.piedra >= 1 && G.res.madera >= 2) construir('muro', nieve[Math.floor(R() * nieve.length)]);
     }
@@ -164,7 +186,15 @@ export function listo(seed, opc = {}) {
 // El listo, pero se olvida de una de cada tres obras, no evacúa, no construye el observatorio y no sabe
 // esperar a la previsión: construye desde el turno 1 con lo que vea.
 // Sirve de referencia de un jugador humano normal: el equilibrio se mide entre el ingenuo y el listo.
-export const medio = (seed) => listo(seed, {olvido: 0.35, sinEvacuar: true, sinObservatorio: true, impaciente: true});
+export const medio = (seed) => listo(seed, {olvido: 0.35, sinEvacuar: true, sinRefugio: true, sinObservatorio: true, impaciente: true});
+
+// ---------- tres estrategias (21-11): ¿hay varios caminos para ganar? ----------
+// muros: diques, escolleras y muros de sobra; nada de refugio ni evacuar.
+export const muros = (seed) => listo(seed, {sinEvacuar: true, sinRefugio: true, muros: true});
+// gente: refugio y evacuar mucho, reparar a tiempo; sin diques ni sacos.
+export const gente = (seed) => listo(seed, {sinDiques: true, gente: true});
+// sacrificio: no repara las casas; terraplén donde caigan junto al agua y sacos de parche.
+export const sacrificio = (seed) => listo(seed, {sinReparar: true, terraplenSiempre: true, sinRefugio: true, sinEvacuar: true});
 
 // ---------- bucle de una partida sin pantalla ----------
 // opts: lo mismo que newGame (town, alc, semilla…). Devuelve cómo acabó.
