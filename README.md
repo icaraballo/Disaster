@@ -11,7 +11,8 @@ desastre hay poco tiempo para prepararse y nunca sabes del todo qué va a venir.
 **Estado:** jugable en la web. El prototipo de la fase de diseño (noviembre de 2026) está portado a
 módulos, con textos aparte, lógica sin pantalla y tests de equilibrio con bots. Desde el 19-11 el
 pueblo se ve en un **mapa en 3D**, y desde el 21-11 (v4) la temporada es **más dura**: casas que caen
-en ruinas, familias acogidas, una previsión que se afina turno a turno y medallas.
+en ruinas, familias acogidas, una previsión que se afina turno a turno y medallas. La v5 añade un
+**refugio** para evacuar familias (cada desastre allí cuesta más comida) y varias formas de ganar.
 
 ## Cómo se juega
 
@@ -47,6 +48,8 @@ Aguantar los 8 desastres da el bronce; la plata y el oro piden acabar con el pue
   funcionan abriendo `index.html` con doble clic).
 - **Tests:** `npm test` (textos, lógica, pantallas y equilibrio con bots). No hace falta
   `npm install`: el juego no tiene dependencias.
+- **Estrategias:** `npm run estrategias` enfrenta al bot listo con tres estrategias puras (muros,
+  cuidar a la gente y sacrificar casas) en cada pueblo.
 - **Simulador de bots:** `npm run simular` cuenta cuántas partidas gana cada bot (ingenuo, medio y
   listo) en cada pueblo, con los vecinos finales, la moral mínima y las medallas.
 - El prototipo original de un solo archivo sigue en `reference/disaster-prototipo-v1.html`
