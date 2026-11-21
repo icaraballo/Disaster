@@ -10,18 +10,22 @@ desastre hay poco tiempo para prepararse y nunca sabes del todo qué va a venir.
 
 **Estado:** jugable en la web. El prototipo de la fase de diseño (noviembre de 2026) está portado a
 módulos, con textos aparte, lógica sin pantalla y tests de equilibrio con bots. Desde el 19-11 el
-pueblo se ve en un **mapa en 3D**.
+pueblo se ve en un **mapa en 3D**, y desde el 21-11 (v4) la temporada es **más dura**: casas que caen
+en ruinas, familias acogidas, una previsión que se afina turno a turno y medallas.
 
 ## Cómo se juega
 
-1. **Aviso.** El observatorio da una previsión con probabilidades que pueden fallar.
+1. **Aviso.** El observatorio da una previsión con probabilidades que pueden fallar y que se
+   afinan en cada turno: esperar da certeza, pero quita tiempo para preparar.
 2. **Preparación.** Tres turnos para repartir a tu gente entre **producir** (madera, piedra,
    comida, dinero) y **construir** sobre el mapa (diques, cortafuegos, pararrayos, muros…).
 3. **Impacto.** El desastre se resuelve paso a paso sobre el mapa.
 4. **Consecuencias.** Eliges una mejora y, a veces, el pueblo te pone ante una decisión.
 
 Nada sale gratis: un dique protege un barrio pero empuja el agua al de abajo, y talar da madera
-pero debilita la ladera. Cada desastre deja consecuencias para el siguiente.
+pero debilita la ladera. Cada desastre deja consecuencias para el siguiente: una casa que no
+reparas a tiempo cae en ruinas, su familia se muda a casa de otra y las ruinas dejan pasar el agua.
+Aguantar los 8 desastres da el bronce; la plata y el oro piden acabar con el pueblo entero.
 
 ## Lo que lo hace distinto
 
@@ -30,7 +34,8 @@ pero debilita la ladera. Cada desastre deja consecuencias para el siguiente.
 - **Riesgo a la vista.** Un mapa de riesgo calcula la probabilidad de daño de cada edificio
   según la previsión, y al final hay un informe con gráficas de lo que pasó.
 - **Vecinos con nombre y oficio** que pueden resultar heridos o marcharse.
-- **Cuatro pueblos** (valle, costa, alta montaña y ría) y **cinco alcaldes** con habilidades.
+- **Cuatro pueblos** (valle, costa, alta montaña y ría), cada uno más difícil que el anterior, y
+  **cinco alcaldes** con habilidades.
 - **Reto diario** con los mismos desastres para todo el mundo.
 - **Equilibrado con simulación**: un simulador de bots juega miles de partidas para ajustar la
   dificultad.
@@ -43,7 +48,7 @@ pero debilita la ladera. Cada desastre deja consecuencias para el siguiente.
 - **Tests:** `npm test` (textos, lógica, pantallas y equilibrio con bots). No hace falta
   `npm install`: el juego no tiene dependencias.
 - **Simulador de bots:** `npm run simular` cuenta cuántas partidas gana cada bot (ingenuo, medio y
-  listo) en cada pueblo.
+  listo) en cada pueblo, con los vecinos finales, la moral mínima y las medallas.
 - El prototipo original de un solo archivo sigue en `reference/disaster-prototipo-v1.html`
   (referencia, no se edita).
 
