@@ -3,6 +3,7 @@
 import { clamp, ao } from './util.js';
 import { pick } from './azar.js';
 import { G, T, newWorker, ofName, obsLevel, aliveWorkers } from './estado.js';
+import { RUINAS, repararRuinas } from './casas.js';
 import { t } from './i18n.js';
 
 // ok() dice si la mejora tiene sentido ahora (para no ofrecer lo que no sirve).
@@ -16,7 +17,7 @@ export const PERKS = [
   {id:'ayuda', sw:'#D99A2B', ok:()=>true, apply:()=>G.res.dinero+=50},
   {id:'fiesta', sw:'#B5502E', ok:()=>G.res.moral<90, apply:()=>G.res.moral=clamp(G.res.moral+20,0,100)},
   {id:'silos', sw:'#C9B57E', ok:()=>true, apply:()=>G.res.comida+=10},
-  {id:'obras', sw:'#5E5A52', ok:()=>G.tiles.some(x=>x.dmg), apply:()=>G.tiles.forEach(x=>x.dmg=false)},
+  {id:'obras', sw:'#5E5A52', ok:()=>G.tiles.some(x=>x.dmg || x.t===RUINAS), apply:()=>G.tiles.forEach((x, i)=>{ x.dmg=false; if (x.t===RUINAS) repararRuinas(i); })},
   {id:'reforestar', sw:'#36673A', ok:()=>G.tiles.some(x=>x.t==='Q') || G.res.riesgo>=25, apply:()=>{ G.tiles.forEach(x=>{ if (x.t==='Q') x.t='B'; }); G.res.riesgo=clamp(G.res.riesgo-15,0,95); }}
 ];
 
@@ -45,7 +46,7 @@ export const EVENTS = [
     const w = pick(G.workers.filter(x=>x.inj && !x.gone)); const v = {nombre: w.name, oficio: ofName(w), a: ao(w)};
     return {...cabecera('hospital', v),
       opts:[{...op('hospital','llevar', v), ok:()=>G.res.dinero>=20, a:()=>{G.res.dinero-=20; w.inj=0;}},{...op('hospital','quedar', v), a:()=>{}}]}; }},
-  {id:'miedo', cond:()=>aliveWorkers().length>=5, mk:()=>{
+  {id:'miedo', cond:()=>aliveWorkers().length>=5 && aliveWorkers().some(x=>!x.inj), mk:()=>{
     const w = pick(aliveWorkers().filter(x=>!x.inj)); const v = {nombre: w.name, oficio: ofName(w), a: ao(w)};
     return {...cabecera('miedo', v),
       opts:[{...op('miedo','convencer', v), ok:()=>G.res.dinero>=15, a:()=>{G.res.dinero-=15;}},{...op('miedo','irse', v), a:()=>{w.gone=true; G.res.comida+=3; G.res.pop-=1;}}]}; }},

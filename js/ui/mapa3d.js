@@ -14,6 +14,7 @@ import { crearModelos } from './modelos3d.js';
 import { crearCamara } from './camara3d.js';
 import { crearEfectos } from './efectos3d.js';
 import { C, entre, semillaCosmetica } from './cosmetico.js';
+import { familias } from '../casas.js';
 
 const ancho = COLS, alto = FILAS;
 const posX = (i) => (i % COLS) - (COLS - 1) / 2;
@@ -118,7 +119,7 @@ export function alDibujar() {
 }
 
 // ---------------------------------------------------------------- sincronizar con el estado
-function firmaCasilla(e) { return [e.t, e.dmg ? 1 : 0, e.dique ? 1 : 0, e.cheap ? 1 : 0, e.muro ? 1 : 0, e.sacos ? 1 : 0, e.rayo ? 1 : 0, e.evac ? 1 : 0].join(''); }
+function firmaCasilla(e) { return [e.t, e.dmg ? 1 : 0, e.dique ? 1 : 0, e.cheap ? 1 : 0, e.muro ? 1 : 0, e.sacos ? 1 : 0, e.rayo ? 1 : 0, e.evac ? 1 : 0, e.fam >= 2 ? 1 : 0].join(''); }
 
 function overlays() {
   const ov = {};
@@ -129,10 +130,12 @@ function overlays() {
 function estadoCasilla(i, modo, ov) {
   const x = T(i);
   if (modo === 'impact' && G.snapTiles) {
+    // T-12: lo que cae en ruinas o se queda en solar durante el impacto cambia en ese suceso
     const b = G.snapTiles[i], o = ov[i] || new Set();
-    return { t: b.t, dmg: !!(b.dmg || o.has('dmg')), dique: x.dique, cheap: x.cheap, muro: x.muro, sacos: false, rayo: x.rayo, evac: false };
+    const tt = o.has('solar') ? 'V' : (o.has('ruinas') ? 'U' : b.t);
+    return { t: tt, dmg: tt === b.t && !!(b.dmg || o.has('dmg')), dique: x.dique, cheap: x.cheap, muro: x.muro, sacos: false, rayo: x.rayo, evac: false, fam: (b.fam || 0) + (o.has('acogida') ? 1 : 0) };
   }
-  return { t: x.t, dmg: x.dmg, dique: x.dique, cheap: x.cheap, muro: x.muro, sacos: x.sacos, rayo: x.rayo, evac: x.evac };
+  return { t: x.t, dmg: x.dmg, dique: x.dique, cheap: x.cheap, muro: x.muro, sacos: x.sacos, rayo: x.rayo, evac: x.evac, fam: familias(x) };
 }
 
 function reiniciarJuego() {
@@ -363,7 +366,7 @@ function sincronizarMunecos(modo) {
     if (modo !== 'impact') {
       for (const k in G.alloc) if (G.alloc[k].includes(w.id)) { tarea = k; destino = G.WORK[k] >= 0 ? G.WORK[k] : w.home; }
       if (!tarea && G.busy.includes(w.id)) { tarea = 'obra'; destino = M.destinos.has(w.id) ? M.destinos.get(w.id) : w.home; }
-      if (w.inj || w.id === G.sulky) { tarea = null; destino = w.home; }
+      if (w.inj || G.desanimados.includes(w.id)) { tarea = null; destino = w.home; }
     }
     const n = ocupacion.get(destino) || 0; ocupacion.set(destino, n + 1);
     m.tarea = tarea; m.destino = destino; m.slot = n; m.herido = !!w.inj && modo !== 'impact';

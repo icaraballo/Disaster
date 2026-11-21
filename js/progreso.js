@@ -1,11 +1,12 @@
 // Progreso entre partidas: victorias, desbloqueos y récord. Se guarda en localStorage y,
 // si el juego corre dentro de Claude.ai, también en su base de datos (ver ranking.js).
 import { TOWNS } from '../data/pueblos.js';
+import { MEDALLAS } from '../data/balance.js';
 import { subirProgreso } from './ranking.js';
 
 const CLAVE = 'villarrio-progress';
 
-export const defaultProg = () => ({wins:{}, maxIdx:{}, total:0, seasons:0, test:false, best:0});
+export const defaultProg = () => ({wins:{}, maxIdx:{}, total:0, seasons:0, test:false, best:0, medallas:{}});
 export let PROG = defaultProg();
 export function setProg(p) { PROG = p; }
 
@@ -22,6 +23,11 @@ export function mergeProg(a, b) {
   o.best = Math.max(a.best || 0, b.best || 0); o.test = !!(a.test || b.test);
   for (const k of new Set([...Object.keys(a.wins || {}), ...Object.keys(b.wins || {})])) o.wins[k] = Math.max((a.wins || {})[k] || 0, (b.wins || {})[k] || 0);
   for (const k of new Set([...Object.keys(a.maxIdx || {}), ...Object.keys(b.maxIdx || {})])) o.maxIdx[k] = Math.max((a.maxIdx || {})[k] || 0, (b.maxIdx || {})[k] || 0);
+  // la mejor medalla de cada pueblo
+  for (const k of new Set([...Object.keys(a.medallas || {}), ...Object.keys(b.medallas || {})])) {
+    const ma = (a.medallas || {})[k], mb = (b.medallas || {})[k];
+    o.medallas[k] = MEDALLAS.indexOf(ma) >= MEDALLAS.indexOf(mb) ? ma : mb;
+  }
   return o;
 }
 

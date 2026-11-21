@@ -8,11 +8,14 @@
     "R": {"nombre": "Río", "que": "Tramo del río. En las riadas el agua se sale hacia las casillas de al lado."},
     "M": {"nombre": "Mar", "que": "En los temporales las olas inundan las casillas de la costa. Puedes poner una escollera para frenarlas."},
     "S": {"nombre": "Nevero", "que": "Nieve acumulada en la cumbre. Puede soltar un alud que baja por su columna hasta chocar con bosque, un muro o un edificio."},
-    "C": {"nombre": "Casa", "que": "Aquí viven varias familias. Si se daña, hay heridos, alguna familia se marcha y baja la moral."},
+    "C": {"nombre": "Casa", "que": "Aquí vive una familia (dos, si acoge a otra). Si se daña, hay heridos, alguien se marcha y baja la moral. Si no la reparas antes del siguiente desastre, cae en ruinas."},
     "A": {"nombre": "Ayuntamiento", "que": "El centro del pueblo. Aquí se recauda. Si se queda sin luz, tienes un turno menos para prepararte y no sirve de refugio en olas de calor."},
     "G": {"nombre": "Granja", "que": "Produce la comida que necesita el pueblo después de cada desastre."},
     "O": {"nombre": "Observatorio", "que": "Mejora la precisión de la previsión mientras no esté dañado."},
-    "W": {"nombre": "Aljibe", "que": "Reserva de agua. En las sequías se pierde la mitad y las granjas siguen produciendo."}
+    "W": {"nombre": "Aljibe", "que": "Reserva de agua. En las sequías se pierde la mitad y las granjas siguen produciendo."},
+    "U": {"nombre": "Ruinas", "que": "Una casa que no se reparó a tiempo. Su familia vive acogida en otra casa. Deja pasar la mitad del agua a la casilla de detrás."},
+    "V": {"nombre": "Solar vacío", "que": "Aquí había una casa. Ya no le pasa nada, pero deja pasar toda el agua a la casilla de detrás."},
+    "E": {"nombre": "Terraplén", "que": "Tierra y escombros: nunca se inunda y el agua no pasa detrás. Junto al río empuja algo de agua río abajo. La casa ya no vuelve."}
   },
 
   "nombres": {
@@ -22,6 +25,8 @@
     "G": "una granja",
     "O": "el observatorio",
     "W": "el aljibe",
+    "U": "las ruinas",
+    "V": "el solar",
     "otra": "una casilla"
   },
 
@@ -65,21 +70,26 @@
   "trabajos": {"talar": "Talar", "cantera": "Cantera", "granja": "Granja", "recaudar": "Recaudar"},
   "trabajando": {"talar": "talando", "cantera": "en la cantera", "granja": "en la granja", "recaudar": "recaudando"},
   "causas": {"agua": "las riadas", "mar": "el mar", "fuego": "el fuego", "rayo": "los rayos", "tierra": "los deslizamientos", "nieve": "los aludes", "hambre": "el hambre", "calor": "el calor"},
-  "salvaciones": {"dique": "los diques", "escollera": "las escolleras", "sacos": "los sacos", "pararrayos": "los pararrayos", "cortafuegos": "los cortafuegos", "muro": "los muros", "bosque": "el bosque, frenando aludes", "evacuar": "las evacuaciones", "refugio": "el refugio del ayuntamiento", "aljibe": "el aljibe"},
+  "salvaciones": {"dique": "los diques", "escollera": "las escolleras", "sacos": "los sacos", "pararrayos": "los pararrayos", "cortafuegos": "los cortafuegos", "muro": "los muros", "bosque": "el bosque, frenando aludes", "evacuar": "las evacuaciones", "refugio": "el refugio del ayuntamiento", "aljibe": "el aljibe", "terraplen": "los terraplenes"},
   "recursos": {"dinero": "dinero", "madera": "madera", "piedra": "piedra", "comida": "comida"},
 
   "construcciones": {
     "dique": "Dique", "escollera": "Escollera", "sacos": "Sacos", "cortafuegos": "Cortafuegos", "pararrayos": "Pararrayos",
-    "muro": "Muro", "evacuar": "Evacuar", "reparar": "Reparar", "observatorio": "Observatorio", "aljibe": "Aljibe"
+    "muro": "Muro", "evacuar": "Evacuar", "reparar": "Reparar", "observatorio": "Observatorio", "aljibe": "Aljibe",
+    "repararRuinas": "Reparar ruinas", "reconstruir": "Reconstruir", "terraplen": "Terraplén", "terraplenSolar": "Terraplén"
   },
   "acciones": {
     "dique": {"nombre": "Dique / escollera", "desc": "Toca un tramo de río (dique) o de mar (escollera). Frena el agua ahí, pero en el río la empuja río abajo."},
-    "sacos": {"nombre": "Sacos", "desc": "Toca un edificio. Lo protege de una inundación (los sacos se gastan)."},
+    "sacos": {"nombre": "Sacos", "desc": "Toca un edificio, unas ruinas o un solar. Lo protege de una inundación y, en ruinas o solar, tapa el agujero (los sacos se gastan)."},
     "cortafuegos": {"nombre": "Cortafuegos", "desc": "Toca un bosque. Lo tala: el fuego no pasa por ahí y ganas +2 madera, pero la tierra se sujeta peor (+5% riesgo de ladera)."},
     "pararrayos": {"nombre": "Pararrayos", "desc": "Toca un edificio. Protege de rayos esa casilla y las de alrededor."},
     "muro": {"nombre": "Muro", "desc": "Toca una ladera o un nevero. Ladera: −15% de riesgo de deslizamiento. Nevero: frena los aludes que salen o pasan por ahí."},
-    "evacuar": {"nombre": "Evacuar", "desc": "Toca una casa. Si le pasa algo en este desastre, nadie resulta herido."},
+    "evacuar": {"nombre": "Evacuar", "desc": "Toca una casa con familia. Si le pasa algo en este desastre, nadie resulta herido ni se marcha nadie."},
     "reparar": {"nombre": "Reparar", "desc": "Toca un edificio dañado para arreglarlo."},
+    "repararRuinas": {"nombre": "Reparar ruinas", "desc": "Toca unas ruinas para levantar la casa otra vez. Su familia vuelve a casa."},
+    "reconstruir": {"nombre": "Reconstruir", "desc": "Toca un solar para hacer una casa nueva. Queda vacía y puede acoger familias."},
+    "terraplen": {"nombre": "Terraplén", "desc": "Toca unas ruinas junto al agua: con los escombros haces un terraplén que frena el agua. La casa ya no vuelve."},
+    "terraplenSolar": {"nombre": "Terraplén", "desc": "Toca un solar junto al agua para hacer un terraplén. La casa ya no vuelve."},
     "observatorio": {"nombre": "Observatorio", "desc": "Toca un prado. Mejora la previsión de los próximos desastres. Solo puedes tener uno."},
     "aljibe": {"nombre": "Aljibe", "desc": "Toca un prado. Reserva de agua: en las sequías se pierde la mitad y las granjas siguen produciendo. Solo uno."}
   },
@@ -94,7 +104,7 @@
     "ayuda": {"nombre": "Ayuda de la diputación", "desc": "+50 de dinero ahora."},
     "fiesta": {"nombre": "Romería", "desc": "+20 de moral ahora."},
     "silos": {"nombre": "Silos llenos", "desc": "+10 de comida ahora."},
-    "obras": {"nombre": "Brigada de obras", "desc": "Repara gratis todos los edificios dañados."},
+    "obras": {"nombre": "Brigada de obras", "desc": "Repara gratis los edificios dañados y las casas en ruinas (sus familias vuelven). No reconstruye los solares."},
     "reforestar": {"nombre": "Repoblación", "desc": "Los bosques quemados vuelven a crecer y la ladera se recupera (−15% riesgo)."}
   },
 
@@ -149,10 +159,20 @@
   "log": {
     "sacos": "Los sacos salvan {lugar}.",
     "evacuada": "{lugar} queda dañada, pero estaba evacuada: nadie herido.",
-    "danada": "queda dañada",
-    "enRuinas": "queda en ruinas",
+    "evacuadaPierde": "{lugar} queda dañada, pero estaba evacuada: nadie herido. Aun así, el pueblo pierde {n} vecino{s}.",
     "heridosY": "{n} herido{s} y ",
-    "casaDanada": "{lugar} {estado}: {heridos}una familia se marcha.",
+    "casaDanada": "{lugar} queda dañada: {heridos}se marchan {n} vecinos.",
+    "casaDanadaVacia": "{lugar} queda dañada. No vivía nadie.",
+    "aRuinas": "{lugar} cae en ruinas.",
+    "familiaAcogida": "Su familia se muda a {lugar}.",
+    "familiaSinSitio": "No hay casa que la acoja: la familia se va del pueblo (−{n} vecinos).",
+    "aSolar": "Las ruinas se quedan en solar.",
+    "familiaCansada": "La familia acogida en {lugar} se cansa de esperar y se va del pueblo (−{n} vecinos).",
+    "acogidaSeVa": "La familia acogida en {lugar} se va del pueblo (−{n} vecinos).",
+    "sinReparar": "Lo que sigue sin reparar desanima al pueblo: −{n} de moral.",
+    "terraplenFrena": "El terraplén frena el agua.",
+    "sacosAgujero": "Los sacos tapan el agujero de {lugar}.",
+    "aguaPasa": "El agua atraviesa {lugar} y llega a {destino}.",
     "medicoEvita": "La atención médica evita que {nombre} acabe herid{a}.",
     "heridoOtraVez": "{nombre} ({oficio}) vuelve a resultar herid{a} y se marcha del pueblo.",
     "heridoCasa": "{nombre} ({oficio}), que vive ahí, resulta herid{a}: no podrá trabajar en la próxima preparación.",
@@ -231,7 +251,18 @@
     "cercaAlud": "Alud: hay un nevero arriba en esta columna.",
     "rayoProtegido": "Rayos: protegido por un pararrayos cercano.",
     "rayoRiesgo": "Rayos: en una tormenta le puede caer uno.",
-    "noArde": "Ya no puede arder."
+    "noArde": "Ya no puede arder.",
+    "sinRepararMoral": "Sin reparar: −{n} de moral en el próximo desastre.",
+    "aRuinasAcogida": "En el próximo desastre caerá en ruinas y la familia se mudará a {lugar}.",
+    "aRuinasSinSitio": "En el próximo desastre caerá en ruinas y, sin casa que la acoja, la familia se irá del pueblo.",
+    "aRuinas": "En el próximo desastre caerá en ruinas.",
+    "casaLlena": "2 familias: si se daña, la familia acogida se va del pueblo.",
+    "aSolarFamilia": "Si no haces nada, en el próximo desastre se quedará en solar y la familia acogida en {lugar} se irá del pueblo.",
+    "aSolar": "Si no haces nada, en el próximo desastre se quedará en solar.",
+    "pasaMitad": "Agua: deja pasar la mitad del agua a {destino}.",
+    "pasaTodo": "Agua: deja pasar toda el agua a {destino}.",
+    "pasaNada": "Agua: detrás no hay nada que se pueda inundar.",
+    "terraplen": "No se inunda y el agua no pasa detrás."
   },
 
   "estado": {
@@ -244,7 +275,11 @@
     "muro": "Con muro",
     "evacuada": "Evacuada",
     "trabajando": "{n} trabajando",
-    "viven": "Viven: {nombres}"
+    "viven": "Viven: {nombres}",
+    "familias": "{n} familia{s}",
+    "vacia": "Vacía",
+    "acogidaEn": "Su familia vive en {lugar}",
+    "familiaIda": "Su familia se fue del pueblo"
   },
 
   "fin": {
@@ -325,7 +360,8 @@
       "constructor": "El constructor ambulante está aquí: diques y escolleras a 1 piedra (pueden ceder).",
       "heridos": "Herid{a}: {nombres} (no trabajan en esta preparación).",
       "heridosEnfermera": "Herid{a}: {nombres} (vuelven en el turno 2).",
-      "desanimado": "{nombre} está desanimad{a} por la baja moral y no trabajará en esta preparación."
+      "desanimado": "{nombre} está desanimad{a} por la baja moral y no trabajará en esta preparación.",
+      "desanimados": "{nombres} están desanimados por la baja moral y no trabajarán en esta preparación."
     },
     "riesgo": {
       "ver": "Ver mapa de riesgo",

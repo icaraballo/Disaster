@@ -9,6 +9,7 @@ import { TEMPORADA } from '../../data/balance.js';
 import { cap, esc, ao, pl, todayKey } from '../util.js';
 import { t } from '../i18n.js';
 import { G, T, townName, ofName, aytoDown, granjasOk, availableWorkers, freeWorkers, W } from '../estado.js';
+import { familias } from '../casas.js';
 import { ACTIONS, costLabel, costLabelObra, planObra, construccion, nombreConstruccion } from '../acciones.js';
 import { production } from '../turnos.js';
 import { riskMap, tileRisks, tileState } from '../riesgo.js';
@@ -47,9 +48,10 @@ function mapHTML(mode) {
   const heat = G.heat && (mode === 'prep' || mode === 'view') && G.fc ? riskMap() : null;
   let h = '<div class="map">';
   G.tiles.forEach((x, i) => {
-    const base = mode === 'impact' ? G.snapTiles[i] : x;
     const o = ov[i] || new Set();
-    const dmgShown = mode === 'impact' ? (base.dmg || o.has('dmg')) : x.dmg;
+    const snap = mode === 'impact' ? G.snapTiles[i] : x;
+    const base = mode === 'impact' && (o.has('ruinas') || o.has('solar')) ? {t: o.has('solar') ? 'V' : 'U', dmg: false} : snap;
+    const dmgShown = mode === 'impact' ? (base.t === snap.t && (base.dmg || o.has('dmg'))) : x.dmg;
     let cls = 'tile' + (dmgShown && BUILD.has(base.t) ? ' broken' : '');
     let canPick = false;
     if (mode === 'prep' && a) { canPick = a.valid(x, i); cls += canPick ? ' pick' : ' nopick'; }
@@ -67,6 +69,7 @@ function mapHTML(mode) {
     if (heat && BUILD.has(x.t)) { const r = heat[i]; if (r >= 0.02) h += '<div class="ov heat" style="background:rgba(176,52,14,' + (0.18 + 0.7 * Math.min(1, r)).toFixed(2) + ')"><span>' + Math.round(r * 100) + '%</span></div>'; }
     if (x.rayo) h += '<div class="badge b-rayo"><svg width="8" height="10" viewBox="0 0 10 12" aria-hidden="true"><path d="M6 0 L1 7 L5 7 L4 12 L9 5 L5 5 Z" fill="#23262B"/></svg></div>';
     if (x.evac && mode !== 'impact') h += '<div class="badge b-evac">E</div>';
+    if (mode !== 'impact' && familias(x) >= 2) h += '<div class="badge b-fam" title="' + esc(t('estado.familias', {n: 2, s: 's'})) + '">2</div>';
     if (dmgShown && BUILD.has(base.t)) h += '<div class="badge b-dmg">✕</div>';
     else if (o.has('ok')) h += '<div class="badge b-ok">✓</div>';
     if (mode === 'prep') { for (const k in G.WORK) if (G.WORK[k] === i && G.alloc[k].length) h += '<div class="badge b-work">' + G.alloc[k].length + '</div>'; }
@@ -117,7 +120,9 @@ function warnings() {
   if (G.cheapDique) w.push(u('warn.constructor'));
   const inj = G.workers.filter(v => v.inj && !v.gone);
   if (inj.length) w.push(u(G.alc === 'enfermera' ? 'warn.heridosEnfermera' : 'warn.heridos', {a: inj.length > 1 ? 'os' : ao(inj[0]), nombres: inj.map(v => v.name).join(', ')}));
-  if (G.sulky) { const s = W(G.sulky); if (s) w.push(u('warn.desanimado', {nombre: s.name, a: ao(s)})); }
+  const des = G.desanimados.map(W).filter(Boolean);
+  if (des.length === 1) w.push(u('warn.desanimado', {nombre: des[0].name, a: ao(des[0])}));
+  else if (des.length > 1) w.push(u('warn.desanimados', {nombres: des.map(s => s.name).join(t('ui.y'))}));
   return w.map(x => '<div class="warnline">' + x + '</div>').join('');
 }
 
@@ -127,7 +132,7 @@ const heatLegend = () => G.heat ? '<div class="muted" style="font-size:12px;line
 function personStatus(w) {
   if (w.gone) return {code:'ido', text:u('persona.ido')};
   if (w.inj && !(G.alc === 'enfermera' && G.turn >= 2 && G.phase === 'prep')) return {code:'fuera', text:u('persona.herido', {a: ao(w)})};
-  if (w.id === G.sulky) return {code:'fuera', text:u('persona.desanimado', {a: ao(w)})};
+  if (G.desanimados.includes(w.id)) return {code:'fuera', text:u('persona.desanimado', {a: ao(w)})};
   if (w.id === G.paperworkId && G.turn === 1 && G.busy.includes(w.id)) return {code:'fuera', text:u('persona.papeleo')};
   for (const k in G.alloc) if (G.alloc[k].includes(w.id)) return {code:'trabaja', text:t('trabajando.' + k)};
   if (G.busy.includes(w.id)) return {code:'obra', text:u('persona.construyendo')};

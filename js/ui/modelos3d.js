@@ -31,7 +31,7 @@ export function crearModelos(THREE) {
   }
 
   // ---------- casillas ----------
-  // e = {t, dmg, dique, cheap, muro, sacos, rayo, evac}. Devuelve el objeto de la casilla con sus piezas teñibles.
+  // e = {t, dmg, dique, cheap, muro, sacos, rayo, evac, fam}. Devuelve el objeto de la casilla con sus piezas teñibles.
   function casilla(i, e, col, fila) {
     const r = conSemilla(i * 7919 + 13);
     const g = new THREE.Group();
@@ -99,6 +99,25 @@ export function crearModelos(THREE) {
         casa.add(malla(caja(0.16, 0.1, 0.02), mat(0x1F1B18), -0.05, h + 0.3, 0.205, { sombra: false }));
         for (let k = 0; k < 3; k++) add(malla(caja(0.07, 0.05, 0.07), mat(0x6E4A32), (r() - 0.5) * 0.8, h + 0.03, 0.3 + r() * 0.12, { ry: r() * 3 }));
       }
+      if (e.fam >= 2) {   // casa llena: un anexo con toldo azul para la familia acogida
+        casa.add(malla(caja(0.22, 0.2, 0.26), matUnico(0xE4D6BA), 0.34, h + 0.1, -0.02));
+        casa.add(malla(caja(0.28, 0.03, 0.32), mat(0x2F6B9A), 0.35, h + 0.215, -0.02, { rz: -0.18 }));
+      }
+    } else if (t === 'U') {   // ruinas: dos trozos de pared, el tejado hundido y escombros
+      const rot = (Math.floor(r() * 4)) * Math.PI / 2;
+      const ruina = new THREE.Group(); ruina.rotation.y = rot; add(ruina);
+      ruina.add(malla(caja(0.07, 0.24, 0.4), matUnico(0xCDBFA4), -0.22, h + 0.12, 0));
+      ruina.add(malla(caja(0.26, 0.15, 0.07), matUnico(0xCDBFA4), -0.08, h + 0.075, -0.19));
+      ruina.add(malla(cono(0.3, 0.12, 4), matUnico(0x6E3B27), 0.08, h + 0.07, 0.05, { ry: Math.PI / 4, rz: 0.35 }));
+      for (let k = 0; k < 6; k++) add(malla(caja(0.06 + r() * 0.05, 0.04, 0.06 + r() * 0.04), mat([0x8C7A60, 0x6E4A32, 0xB5A58A][k % 3]), (r() - 0.5) * 0.75, h + 0.02, (r() - 0.5) * 0.75, { ry: r() * 3 }));
+    } else if (t === 'V') {   // solar vacío: los cimientos marcados y algo de hierba
+      [[0, -0.3, 0.62, 0.05], [0, 0.3, 0.62, 0.05], [-0.3, 0, 0.05, 0.62], [0.3, 0, 0.05, 0.62]].forEach(([x, z, a, b]) => add(malla(caja(a, 0.04, b), mat(0x8C7A60), x, h + 0.02, z, { sombra: false })));
+      for (let k = 0; k < 4; k++) add(malla(cono(0.03, 0.1, 4), mat(0x7FA05E), (r() - 0.5) * 0.5, h + 0.05, (r() - 0.5) * 0.5, { sombra: false }));
+    } else if (t === 'E') {   // terraplén: un talud de tierra y escombros
+      const talud = malla(cil(0.001, 0.48, 0.97, 3), matUnico(0x7A6A50), 0, h + 0.17, 0, { rz: Math.PI / 2 });
+      talud.scale.set(0.7, 1, 1); add(talud);
+      add(malla(caja(0.97, 0.05, 0.22), mat(0xC9B58E), 0, h + 0.3, 0, { sombra: false }));
+      for (let k = 0; k < 4; k++) add(malla(roca(0.05 + r() * 0.03), mat(0x6E5E48), (r() - 0.5) * 0.8, h + 0.06, 0.3 + (r() - 0.5) * 0.1));
     } else if (t === 'A') {
       const pared = dano ? matUnico(0x9B8466) : matUnico(0xF1E6CE), tejado = matUnico(dano ? 0x4A3560 : 0x7A5A9E);
       add(malla(caja(0.72, 0.34, 0.5), pared, 0, h + 0.17, 0.05));

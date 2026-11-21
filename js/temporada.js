@@ -1,7 +1,8 @@
 // Lo que pasa entre desastres (resultado, mejora, evento) y al acabar la temporada. Sin pantalla.
 import { TOWNS } from '../data/pueblos.js';
 import { ALCALDES } from '../data/alcaldes.js';
-import { TEMPORADA, VECINOS_MINIMOS } from '../data/balance.js';
+import { TEMPORADA, VECINOS_MINIMOS, MEDALLAS, MEDALLA_PLATA, MEDALLA_ORO } from '../data/balance.js';
+import { RUINAS, SOLAR } from './casas.js';
 import { RS, pick, shuffle } from './azar.js';
 import { G, townName, aliveWorkers } from './estado.js';
 import { newForecast } from './partida.js';
@@ -43,6 +44,14 @@ export function score() {
   return (G.lost ? G.idx : TEMPORADA) * 100 + Math.max(0, G.res.pop) * 10 + G.res.moral * 3 + aliveWorkers().length * 20 + (G.lost ? 0 : 500);
 }
 
+// La medalla de la temporada: null si se ha perdido.
+export function medalla() {
+  if (G.lost) return null;
+  const r = G.res, plata = r.pop >= MEDALLA_PLATA.vecinos && r.moral >= MEDALLA_PLATA.moral;
+  const oro = plata && r.pop >= MEDALLA_ORO.vecinos && r.moral >= MEDALLA_ORO.moral && !G.tiles.some(x => x.t === RUINAS || x.t === SOLAR);
+  return oro ? 'oro' : (plata ? 'plata' : 'bronce');
+}
+
 // Cierra la temporada: puntúa, apunta el progreso y mira qué se ha desbloqueado.
 export function finish() {
   G.phase = 'end'; G.final = score();
@@ -52,6 +61,9 @@ export function finish() {
   PROG.seasons += 1;
   PROG.maxIdx[G.town] = Math.max(PROG.maxIdx[G.town] || 0, reached);
   if (!G.lost) PROG.wins[G.town] = (PROG.wins[G.town] || 0) + 1;
+  G.medalla = medalla();
+  G.medallaNueva = !!G.medalla && MEDALLAS.indexOf(G.medalla) > MEDALLAS.indexOf((PROG.medallas || {})[G.town]);
+  if (G.medallaNueva) PROG.medallas = {...(PROG.medallas || {}), [G.town]: G.medalla};
   G.record = G.final > (PROG.best || 0); PROG.best = Math.max(PROG.best || 0, G.final);
   G.unlocked = [];
   Object.keys(TOWNS).forEach(k => { const u = TOWNS[k].unlock; if (u && !cumple(u, before) && cumple(u, PROG)) G.unlocked.push(t('fin.desbloqueoPueblo', {nombre: t('pueblos.' + k + '.nombre')})); });

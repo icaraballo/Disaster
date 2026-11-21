@@ -3,6 +3,7 @@ import { clamp } from './util.js';
 import { G, W, granjasOk, freeWorkers, cleanAlloc } from './estado.js';
 import { rankJob } from './acciones.js';
 import { startImpact } from './desastres.js';
+import { afinarPrevision } from './partida.js';
 import { t } from './i18n.js';
 
 // Lo que producirá este turno el reparto actual.
@@ -39,5 +40,5 @@ export function endTurn() {
   G.msg = got.length ? t('msg.produccion.total', {lista: got.join(', ')}) : '';
   G.busy = []; G.sel = null; G.turn++;
   cleanAlloc();
-  if (G.turn > G.maxTurns) startImpact();
+  if (G.turn > G.maxTurns) startImpact(); else afinarPrevision();
 }

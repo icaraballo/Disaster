@@ -41,9 +41,11 @@ test('el calendario de desastres respeta el pueblo y la temporada', () => {
       assert.equal(G.schedule.length, TEMPORADA);
       G.schedule.forEach((d, i) => {
         d.types.forEach(t => assert.ok(p.pool[t], `${t} no existe en ${k}`));
-        assert.equal(d.I, i < 3 ? 1 : (i < 6 ? 2 : 3));
-        if (d.types.length === 2) assert.ok(i >= 5, 'los combinados sólo al final');
+        // T-12: escalada 1-1-2-2-2-3-3-3; dobles desde el 5.º y el 8.º siempre doble (si el pueblo tiene parejas)
+        assert.equal(d.I, [1, 1, 2, 2, 2, 3, 3, 3][i]);
+        if (d.types.length === 2) assert.ok(i >= 4, 'los combinados sólo desde el desastre 5');
       });
+      assert.equal(G.schedule[TEMPORADA - 1].types.length, 2, `${k}: el último desastre es doble`);
     }
   }
 });

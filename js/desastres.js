@@ -2,15 +2,19 @@
 // ({text, kind, tiles}) a una lista que la vista va enseñando poco a poco.
 import { BUILD } from '../data/casillas.js';
 import { SLIDE_MULT } from '../data/desastres.js';
-import { DIQUE_ARRASTRE, DIQUE_BARATO_CEDE, riadaP, temporalP, aludP, deslizamientoP, deslizamientoCasillas } from '../data/balance.js';
+import { DIQUE_ARRASTRE, DIQUE_BARATO_CEDE, TERRAPLEN_ARRASTRE, PASA_AGUA, VECINOS_CASA_DANADA, VECINOS_EVACUADA, MORAL_SIN_REPARAR, riadaP, temporalP, aludP, deslizamientoP, deslizamientoCasillas, rayosTormenta, focosIncendio } from '../data/balance.js';
 import { RI, shuffle, pick } from './azar.js';
 import { cap, clamp, nb4, cheb, ao, pl } from './util.js';
-import { G, T, town, aytoIdx, aytoDown, aljibeOk, healthy, ofName } from './estado.js';
+import { COLS, N } from '../data/casillas.js';
+import { RUINAS, SOLAR, TERRAPLEN, familias, aRuinas, seVanAcogidas, finDeImpacto, fotoInicio, nombreCasa } from './casas.js';
+import { G, T, town, peligro, aytoIdx, aytoDown, aljibeOk, healthy, ofName } from './estado.js';
 import { t } from './i18n.js';
 
 function tileName(i) {
   const x = T(i);
-  if (x.t === 'C') { const w = G.workers.find(v => v.home === i && !v.gone); return w ? t('nombres.casaDe', {nombre: w.name}) : t('nombres.C'); }
+  if (x.t === 'C') return nombreCasa(i);
+  if (x.t === RUINAS) return t('nombres.U');
+  if (x.t === SOLAR) return t('nombres.V');
   return ['A','G','O','W'].includes(x.t) ? t('nombres.' + x.t) : t('nombres.otra');
 }
 const save = (k, n) => { G.stats.saves[k] = (G.stats.saves[k] || 0) + (n || 1); };
@@ -22,15 +26,28 @@ function damage(i, cause, ctx) {
   const already = x.dmg; x.dmg = true; ctx.dmg++; G.stats.cause[cause] = (G.stats.cause[cause] || 0) + 1;
   r.moral = clamp(r.moral - 6, 0, 100);
   if (x.t === 'C') {
-    if (x.evac) { save('evacuar'); return [{text:t('log.evacuada', {lugar: cap(nm)}), kind:'warn', tiles:[[i,'dmg']]}]; }
-    const her = Math.max(0, 2 - (healthy('medico') ? 1 : 0) - (G.alc === 'enfermera' ? 1 : 0));
-    r.pop -= 5; r.heridos += her;
-    out.push({text:t('log.casaDanada', {lugar: cap(nm), estado: t(already ? 'log.enRuinas' : 'log.danada'), heridos: her ? t('log.heridosY', {n: her, s: pl(her)}) : ''}), kind:'bad', tiles:[[i,'dmg']]});
-    G.workers.filter(w => w.home === i && !w.gone && !w.temp).forEach(w => {
-      if (healthy('medico') && w.of !== 'medico' && RI() < 0.5) { out.push({text:t('log.medicoEvita', {nombre: w.name, a: ao(w)}), kind:'good'}); return; }
-      if (w.inj) { w.gone = true; out.push({text:t('log.heridoOtraVez', {nombre: w.name, oficio: ofName(w), a: ao(w)}), kind:'bad'}); }
-      else { w.inj = 1; out.push({text:t('log.heridoCasa', {nombre: w.name, oficio: ofName(w), a: ao(w)}), kind:'bad'}); }
-    });
+    const fam = familias(x);
+    if (x.evac) {
+      // evacuada: nadie herido y la familia acogida no se va, pero alguien de la casa se marcha igual
+      save('evacuar');
+      const pierde = !already && x.propia ? VECINOS_EVACUADA : 0; r.pop -= pierde;
+      out.push({text:t(pierde ? 'log.evacuadaPierde' : 'log.evacuada', {lugar: cap(nm), n: pierde, s: pl(pierde)}), kind:'warn', tiles:[[i,'dmg']]});
+    } else {
+      if (!already) {
+        const her = fam ? Math.max(0, 2 - (healthy('medico') ? 1 : 0) - (G.alc === 'enfermera' ? 1 : 0)) : 0;
+        const pierde = x.propia ? VECINOS_CASA_DANADA : 0;
+        r.pop -= pierde; r.heridos += her;
+        out.push({text:t(pierde ? 'log.casaDanada' : 'log.casaDanadaVacia', {lugar: cap(nm), heridos: her ? t('log.heridosY', {n: her, s: pl(her)}) : '', n: pierde}), kind:'bad', tiles:[[i,'dmg']]});
+        seVanAcogidas(i, out);
+      }
+      G.workers.filter(w => w.home === i && !w.gone && !w.temp).forEach(w => {
+        if (healthy('medico') && w.of !== 'medico' && RI() < 0.5) { out.push({text:t('log.medicoEvita', {nombre: w.name, a: ao(w)}), kind:'good'}); return; }
+        if (w.inj) { w.gone = true; out.push({text:t('log.heridoOtraVez', {nombre: w.name, oficio: ofName(w), a: ao(w)}), kind:'bad'}); }
+        else { w.inj = 1; out.push({text:t('log.heridoCasa', {nombre: w.name, oficio: ofName(w), a: ao(w)}), kind:'bad'}); }
+      });
+    }
+    // dañada y golpeada otra vez: pasa a ruinas (un solo escalón)
+    if (already) aRuinas(i, out);
     return out;
   }
   if (x.t === 'A') return [{text:t('log.aytoSinLuz'), kind:'cascade', tiles:[[i,'dmg']]}];
@@ -39,15 +56,45 @@ function damage(i, cause, ctx) {
   return [{text:t('log.obsDanado'), kind:'cascade', tiles:[[i,'dmg']]}];
 }
 
-// Agua que sale del cauce (río) o de la costa (mar) hacia las casillas de al lado.
+// La casilla de detrás de n, siguiendo la dirección del agua (de s a n). null si se sale del mapa
+// o si es río o mar.
+export function detras(s, n) {
+  const d = n - s, j = n + d;
+  if (j < 0 || j >= N) return null;
+  if ((d === 1 || d === -1) && Math.floor(j / COLS) !== Math.floor(n / COLS)) return null;
+  const tt = G.tiles[j].t;
+  return tt === 'R' || tt === 'M' ? null : j;
+}
+
+// Agua que sale del cauce (río) o de la costa (mar) hacia las casillas de al lado. Las ruinas y los
+// solares dejan pasar el agua a la casilla de detrás (T-12 §B.3); el terraplén la frena.
 function waterFlood(srcList, p0, cause, ev, ctx, isRiver) {
-  let carry = 0; const flooded = new Set(), held = [], failed = [];
+  let carry = 0; const flooded = new Set(), held = [], failed = [], tapados = [], frena = new Set(), pasa = [];
+  // el agua llega a la casilla n desde s: se inunda y, si son ruinas o un solar, puede seguir
+  const llega = (s, n) => {
+    flooded.add(n);
+    let de = s, cur = n;
+    while (T(cur).t === RUINAS || T(cur).t === SOLAR) {
+      if (T(cur).sacos) { T(cur).sacos = false; tapados.push(cur); return; }
+      if (RI() >= PASA_AGUA[T(cur).t]) return;
+      const j = detras(de, cur);
+      if (j == null) return;
+      if (T(j).t === TERRAPLEN) { frena.add(j); return; }
+      pasa.push([cur, j]); flooded.add(j);
+      de = cur; cur = j;
+    }
+  };
   for (const s of srcList) {
     const x = T(s);
     if (x.dique && x.cheap && RI() < DIQUE_BARATO_CEDE) { x.dique = false; x.cheap = false; failed.push(s); }
     if (x.dique) { if (isRiver) carry += p0 * DIQUE_ARRASTRE; held.push(s); continue; }
     const pt = Math.min(0.9, p0 + carry); if (isRiver) carry *= 0.5;
-    nb4(s).forEach(n => { const tt = T(n).t; if (tt !== 'R' && tt !== 'M' && RI() < pt) flooded.add(n); });
+    nb4(s).forEach(n => {
+      const tt = T(n).t;
+      if (tt === 'R' || tt === 'M') return;
+      if (tt === TERRAPLEN) { frena.add(n); if (isRiver) carry += p0 * TERRAPLEN_ARRASTRE; return; }
+      if (RI() < pt) llega(s, n);
+    });
   }
   if (failed.length) ev.push({text:failed.length === 1 ? t('log.diqueCede1') : t('log.diqueCedeN', {n: failed.length}), kind:'bad', tiles:failed.map(i => [i,'dmg'])});
   if (held.length) {
@@ -55,8 +102,11 @@ function waterFlood(srcList, p0, cause, ev, ctx, isRiver) {
     const clave = (isRiver ? 'log.dique' : 'log.escollera') + (held.length === 1 ? '1' : 'N');
     ev.push({text:t(clave, {n: held.length}), kind:'good', tiles:held.map(i => [i,'ok'])});
   }
+  if (frena.size) { save('terraplen', frena.size); ev.push({text:t('log.terraplenFrena'), kind:'good', tiles:[...frena].map(i => [i,'ok'])}); }
   if (flooded.size) ev.push({text:t(isRiver ? 'log.inundaRio' : 'log.inundaMar', {n: flooded.size, s: pl(flooded.size)}), kind:'warn', tiles:[...flooded].map(i => [i,'flood'])});
   else ev.push({text:t(isRiver ? 'log.noInundaRio' : 'log.noInundaMar'), kind:'good'});
+  tapados.forEach(i => { save('sacos'); ev.push({text:t('log.sacosAgujero', {lugar: tileName(i)}), kind:'good', tiles:[[i,'ok']]}); });
+  pasa.forEach(([a, b]) => ev.push({text:t('log.aguaPasa', {lugar: tileName(a), destino: tileName(b)}), kind:'warn', tiles:[[a,'flood'],[b,'flood']]}));
   [...flooded].filter(i => BUILD.has(T(i).t)).forEach(i => damage(i, cause, ctx).forEach(e => ev.push(e)));
 }
 
@@ -66,18 +116,18 @@ const idxDe = (tipo) => G.tiles.map((x, i) => x.t === tipo ? i : -1).filter(i =>
 export const RESOLVE = {
   riada(I, ev, ctx) {
     ev.push({text:t('log.riada'), kind:'title', tiles:town().river.map(i => [i,'flood'])});
-    waterFlood(town().river, riadaP(I, town().riadaMult, G.perks.bomba), 'agua', ev, ctx, true);
+    waterFlood(town().river, riadaP(I, town().riadaMult, G.perks.bomba, peligro()), 'agua', ev, ctx, true);
   },
   temporal(I, ev, ctx) {
     const sea = idxDe('M');
     ev.push({text:t('log.temporal'), kind:'title', tiles:sea.map(i => [i,'flood'])});
-    waterFlood(sea, temporalP(I, G.perks.bomba), 'mar', ev, ctx, false);
+    waterFlood(sea, temporalP(I, G.perks.bomba, peligro()), 'mar', ev, ctx, false);
   },
   incendio(I, ev, ctx) {
     let src = idxDe('B');
     if (!src.length) src = idxDe('P');
-    const starts = shuffle(src, RI).slice(0, I);
-    const PR = {B:.7, P:.3, L:.15, C:.45, A:.45, G:.45, O:.45, W:.2};
+    const starts = shuffle(src, RI).slice(0, focosIncendio(I, peligro()));
+    const PR = {B:.7, P:.3, L:.15, C:.45, A:.45, G:.45, O:.45, W:.2, U:.3, V:.3, E:.3}; // ruinas, solar y terraplén arden como un prado, sin dañarse
     const mod = (ctx.dry ? 0.15 : 0) - (G.perks.bomberos ? 0.2 : 0) - (healthy('bombero') ? 0.12 : 0);
     const burned = new Set(starts), blocked = new Set(), q = starts.slice();
     while (q.length && burned.size < 26) {
@@ -105,7 +155,7 @@ export const RESOLVE = {
   tormenta(I, ev, ctx) {
     ev.push({text:t('log.tormenta'), kind:'title'});
     const builds = G.tiles.map((x, i) => BUILD.has(x.t) ? i : -1).filter(i => i >= 0);
-    shuffle(builds, RI).slice(0, 3 + I).forEach(i => {
+    shuffle(builds, RI).slice(0, rayosTormenta(I, peligro())).forEach(i => {
       const prot = G.tiles.some((x, j) => x.rayo && cheb(i, j) <= 1);
       if (prot) { save('pararrayos'); ev.push({text:t('log.pararrayos', {lugar: tileName(i)}), kind:'good', tiles:[[i,'ok']]}); return; }
       ev.push({text:t('log.rayo', {lugar: tileName(i)}), kind:'warn', tiles:[[i,'bolt']]});
@@ -114,7 +164,7 @@ export const RESOLVE = {
   },
   alud(I, ev, ctx) {
     ev.push({text:t('log.alud'), kind:'title', tiles:G.NIEVE.map(i => [i,'snow'])});
-    const pTrig = aludP(I, G.res.riesgo);
+    const pTrig = aludP(I, G.res.riesgo, peligro());
     const cols = {};
     G.NIEVE.forEach(i => { const c = i % 7; if (cols[c] === undefined || i < cols[c]) cols[c] = i; });
     let any = false;
@@ -177,23 +227,26 @@ export const RESOLVE = {
 // para que la vista los vaya contando. G.phase pasa a 'impact'.
 export function startImpact() {
   G.snap = JSON.parse(JSON.stringify(G.res));
-  G.snapTiles = G.tiles.map(x => ({t:x.t, dmg:x.dmg}));
+  G.snapTiles = G.tiles.map(x => ({t:x.t, dmg:x.dmg, fam:familias(x)}));
+  const inicio = fotoInicio();
   G.res.heridos = 0;
   G.workers.forEach(w => { if (w.inj) w.inj = 0; });
   G.dryFarm = false;
   const ev = [], ctx = {dmg:0, dry:G.dry}, I = G.fc.I, types = G.fc.real;
   G.dry = false;
   types.forEach(k => RESOLVE[k](I, ev, ctx));
-  if (G.SLIDE.length) {
+  const slide = G.SLIDE.filter(i => BUILD.has(T(i).t)); // ruinas y solares no se dañan
+  if (slide.length) {
     const mult = Math.max(...types.map(k => SLIDE_MULT[k]));
-    const chance = deslizamientoP(G.res.riesgo, mult, I);
+    const chance = deslizamientoP(G.res.riesgo, mult, I, peligro());
     if (mult > 0 && RI() < chance) {
       ev.push({text:t('log.deslizamiento'), kind:'cascade', tiles:G.LADERA.map(i => [i,'slide'])});
-      shuffle(G.SLIDE, RI).slice(0, deslizamientoCasillas(I)).forEach(i => damage(i, 'tierra', ctx).forEach(e => ev.push(e)));
+      shuffle(slide, RI).slice(0, deslizamientoCasillas(I)).forEach(i => damage(i, 'tierra', ctx).forEach(e => ev.push(e)));
     } else if (mult > 0 && G.res.riesgo >= 30) {
       ev.push({text:t('log.laderaCruje'), kind:'info', tiles:G.LADERA.map(i => [i,'ok'])});
     }
   }
+  finDeImpacto(inicio, ev, MORAL_SIN_REPARAR);
   const need = Math.ceil(G.res.pop / 6);
   if (G.res.comida >= need) { G.res.comida -= need; G.res.moral = clamp(G.res.moral + 1, 0, 100); ev.push({text:t('log.consume', {n: need}), kind:'info'}); }
   else { G.res.comida = 0; G.res.moral = clamp(G.res.moral - 15, 0, 100); G.stats.cause.hambre = (G.stats.cause.hambre || 0) + 1; ev.push({text:t('log.hambre'), kind:'bad'}); }

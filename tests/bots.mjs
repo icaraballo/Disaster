@@ -17,7 +17,9 @@ import { ACTIONS, doAction } from '../js/acciones.js';
 import { changeJob, endTurn } from '../js/turnos.js';
 import { toResult, choosePerk, chooseEvent, finish } from '../js/temporada.js';
 import { riskMap } from '../js/riesgo.js';
-import { cheb } from '../js/util.js';
+import { cheb, nb4 } from '../js/util.js';
+import { RUINAS, SOLAR, familias } from '../js/casas.js';
+import { pasaAgua } from '../js/riesgo.js';
 
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export function cargarTextosDeDisco() {
@@ -57,20 +59,37 @@ export function listo(seed, opc = {}) {
     if (opc.olvido && R() < opc.olvido) return false;
     G.sel = acc; const ok = doAction(i); G.sel = null; return ok;
   };
-  const hay = (k) => G.fc.real.includes(k) || G.fc.decoy.includes(k);
+  // Lo que ve el jugador: dos opciones con su %. El listo espera a que la previsión se afine: antes del
+  // último turno sólo se prepara para un desastre si su % pasa del umbral; el impaciente (medio) no espera.
+  const pct = (k) => (G.fc.real.includes(k) ? G.fc.pReal : 0) + (G.fc.decoy.includes(k) ? 100 - G.fc.pReal : 0);
+  const ultimo = () => G.turn >= G.maxTurns;
+  const hay = (k) => (G.fc.real.includes(k) || G.fc.decoy.includes(k)) && (opc.impaciente || ultimo() || pct(k) >= (opc.umbral || 70));
 
   function proteger() {
     const heat = riskMap();
     const edif = G.tiles.map((x, i) => i).filter(i => BUILD.has(T(i).t)).sort((a, b) => heat[b] - heat[a]);
-    // 1. reparar lo dañado
-    edif.forEach(i => { if (T(i).dmg && G.res.madera >= 2) construir('reparar', i); });
+    // 1. reparar lo dañado, primero las casas con más familias (si no, caen en ruinas)
+    const prioridad = (i) => (T(i).t === 'C' ? 10 * familias(T(i)) : 5) + heat[i];
+    [...edif].sort((a, b) => prioridad(b) - prioridad(a)).forEach(i => { if (T(i).dmg && G.res.madera >= 2) construir('reparar', i); });
+    // 1b. ruinas y solares: terraplén junto al agua, reparar las ruinas lejos; sacos de parche si no llega
+    const junto = (i) => nb4(i).some(j => T(j).t === 'R' || T(j).t === 'M');
+    G.tiles.forEach((x, i) => {
+      if (x.t !== RUINAS && x.t !== SOLAR) return;
+      if (junto(i)) {
+        if (x.t === RUINAS && G.res.madera >= 2) { if (construir('terraplen', i)) return; }
+        if (x.t === SOLAR && G.res.madera >= 2 && G.res.piedra >= 2) { if (construir('terraplenSolar', i)) return; }
+        if (pasaAgua(i).some(j => BUILD.has(T(j).t)) && G.res.dinero >= 8 && (hay('riada') || hay('temporal'))) construir('sacos', i);
+      } else if (x.t === RUINAS && x.acogidaEn != null && G.res.madera >= 4) construir('repararRuinas', i);
+    });
     // 2. observatorio si se puede (mejora la previsión)
     if (!opc.sinObservatorio && G.res.madera >= 4 && G.res.dinero >= 30 + 15) {
       const prados = G.tiles.map((x, i) => i).filter(i => T(i).t === 'P');
       if (prados.length && libres() >= 2) construir('observatorio', prados[Math.floor(R() * prados.length)]);
     }
     // 2b. evacuar las casas amenazadas (una casa evacuada no pierde vecinos ni deja heridos)
-    if (!opc.sinEvacuar) edif.filter(i => T(i).t === 'C' && heat[i] >= 0.1).slice(0, 6).forEach(i => { if (G.res.comida >= 6) construir('evacuar', i); });
+    // (primero la casa con 2 familias: si se daña, la acogida se va del pueblo)
+    if (!opc.sinEvacuar && (opc.impaciente || ultimo())) edif.filter(i => T(i).t === 'C' && familias(T(i)) > 0 && heat[i] >= 0.1)
+      .sort((a, b) => familias(T(b)) * heat[b] - familias(T(a)) * heat[a]).slice(0, 6).forEach(i => { if (G.res.comida >= 6) construir('evacuar', i); });
     const peligrosos = edif.filter(i => heat[i] >= 0.12).slice(0, 8);
     // 3. proteger según lo que viene
     if (hay('riada') || hay('temporal')) {
@@ -142,16 +161,18 @@ export function listo(seed, opc = {}) {
 }
 
 // ---------- el medio: un jugador que se despista ----------
-// El listo, pero se olvida de una de cada tres obras, no evacúa y no construye el observatorio.
+// El listo, pero se olvida de una de cada tres obras, no evacúa, no construye el observatorio y no sabe
+// esperar a la previsión: construye desde el turno 1 con lo que vea.
 // Sirve de referencia de un jugador humano normal: el equilibrio se mide entre el ingenuo y el listo.
-export const medio = (seed) => listo(seed, {olvido: 0.35, sinEvacuar: true, sinObservatorio: true});
+export const medio = (seed) => listo(seed, {olvido: 0.35, sinEvacuar: true, sinObservatorio: true, impaciente: true});
 
 // ---------- bucle de una partida sin pantalla ----------
 // opts: lo mismo que newGame (town, alc, semilla…). Devuelve cómo acabó.
 export function jugar(opts, bot) {
   newGame(opts);
-  let guard = 0;
+  let guard = 0, moralMin = G.res.moral;
   while (G.phase !== 'end' && guard++ < 600) {
+    moralMin = Math.min(moralMin, G.res.moral);
     if (G.phase === 'forecast') { G.phase = 'prep'; G.msg = ''; }
     else if (G.phase === 'prep') { bot.preparar(); endTurn(); }
     else if (G.phase === 'impact') toResult();
@@ -163,16 +184,24 @@ export function jugar(opts, bot) {
     else throw new Error('Fase inesperada: ' + G.phase);
   }
   if (G.phase !== 'end') throw new Error('La partida no ha terminado');
-  return {ganada: !G.lost, desastre: G.lost ? G.idx + 1 : TEMPORADA, puntos: G.final, town: G.town, alc: G.alc};
+  moralMin = Math.min(moralMin, G.res.moral);
+  return {ganada: !G.lost, desastre: G.lost ? G.idx + 1 : TEMPORADA, puntos: G.final, town: G.town, alc: G.alc,
+    vecinos: G.res.pop, moralMin, medalla: G.medalla || null};
 }
 
-// Juega n partidas y devuelve el porcentaje ganado y el desastre medio alcanzado.
+const cuantil = (a, q) => { const b = [...a].sort((x, y) => x - y); return b.length ? b[Math.min(b.length - 1, Math.floor(q * b.length))] : 0; };
+
+// Juega n partidas y devuelve el porcentaje ganado, el desastre medio alcanzado, los vecinos
+// finales (p10 y mediana), la moral mínima (mediana) y el reparto de medallas entre las ganadas.
 export function simular(botFn, {town, alc = 'ingeniera', n = 200, semilla0 = 1}) {
-  let ganadas = 0, suma = 0;
+  let ganadas = 0, suma = 0; const vec = [], mor = [], med = {bronce:0, plata:0, oro:0};
   for (let s = 0; s < n; s++) {
     const r = jugar({town, alc, semilla: semilla0 + s}, botFn(semilla0 + s));
     if (r.ganada) ganadas++;
-    suma += r.desastre;
+    suma += r.desastre; vec.push(r.vecinos); mor.push(r.moralMin);
+    if (r.medalla) med[r.medalla]++;
   }
-  return {pct: 100 * ganadas / n, medio: suma / n};
+  const pctMed = (k) => ganadas ? 100 * med[k] / ganadas : 0;
+  return {pct: 100 * ganadas / n, medio: suma / n, vecP10: cuantil(vec, 0.1), vecMed: cuantil(vec, 0.5), moralMed: cuantil(mor, 0.5),
+    oro: pctMed('oro'), plata: pctMed('plata') + pctMed('oro')};
 }

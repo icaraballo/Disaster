@@ -1,8 +1,11 @@
 // Acciones de construcción: coste, dónde valen y qué hacen. Se elige la acción y se toca una casilla.
 import { BUILD } from '../data/casillas.js';
+import { MORAL_EVACUAR } from '../data/balance.js';
 import { OFICIOS } from '../data/gente.js';
 import { clamp } from './util.js';
 import { G, T, hasType, freeWorkers } from './estado.js';
+import { nb4 } from './util.js';
+import { RUINAS, SOLAR, familias, repararRuinas, reconstruir, terraplen } from './casas.js';
 import { t } from './i18n.js';
 
 export const RECURSOS = ['dinero', 'madera', 'piedra', 'comida'];
@@ -11,7 +14,7 @@ export const RECURSOS = ['dinero', 'madera', 'piedra', 'comida'];
 export const ACTIONS = {
   dique:{cuad:1, cost:()=>({piedra: G.cheapDique ? 1 : Math.max(1, 3 - (G.alc==='ingeniera'?1:0) - (G.perks.muros?1:0))}), valid:(x)=>(x.t==='R'||x.t==='M') && !x.dique,
     apply:(x)=>{ x.dique=true; x.cheap=G.cheapDique; }},
-  sacos:{cuad:1, cost:()=>({dinero:8}), valid:(x)=>BUILD.has(x.t) && !x.sacos,
+  sacos:{cuad:1, cost:()=>({dinero:8}), valid:(x)=>(BUILD.has(x.t) || x.t===RUINAS || x.t===SOLAR) && !x.sacos,
     apply:(x)=>{ x.sacos=true; }},
   cortafuegos:{cuad:1, cost:()=>({}), valid:(x)=>x.t==='B',
     apply:(x)=>{ x.t='X'; G.res.madera+=2; G.res.riesgo=clamp(G.res.riesgo+5,0,95); }},
@@ -19,18 +22,31 @@ export const ACTIONS = {
     apply:(x)=>{ x.rayo=true; }},
   muro:{cuad:2, cost:()=>({piedra:Math.max(0,2-(G.alc==='ingeniera'?1:0)), madera:2}), valid:(x)=>(x.t==='L'||x.t==='S') && !x.muro,
     apply:(x)=>{ x.muro=true; if (x.t==='L') G.res.riesgo=clamp(G.res.riesgo-15,0,95); }},
-  evacuar:{cuad:1, cost:()=>({comida:2}), valid:(x)=>x.t==='C' && !x.evac,
-    apply:(x)=>{ x.evac=true; }},
+  evacuar:{cuad:1, cost:()=>({comida:2}), valid:(x)=>x.t==='C' && familias(x) > 0 && !x.evac,
+    apply:(x)=>{ x.evac=true; G.res.moral=clamp(G.res.moral-MORAL_EVACUAR,0,100); }},
   reparar:{cuad:1, cost:()=>({madera:2}), valid:(x)=>x.dmg,
     apply:(x)=>{ x.dmg=false; }},
+  // T-12: la escalera de la casa. Cada estado es una acción con su coste fijo, para que la tarjeta y la
+  // ficha enseñen siempre lo mismo que se cobra (planObra no necesita conocer la casilla).
+  repararRuinas:{cuad:2, cost:()=>({madera:4}), valid:(x)=>x.t===RUINAS, casa:true,
+    apply:(x, i)=>repararRuinas(i)},
+  reconstruir:{cuad:2, cost:()=>({madera:4, piedra:2}), valid:(x)=>x.t===SOLAR, casa:true,
+    apply:(x, i)=>reconstruir(i)},
+  terraplen:{cuad:2, cost:()=>({madera:2}), valid:(x, i)=>x.t===RUINAS && junto_agua(i), casa:true,
+    apply:(x, i)=>terraplen(i)},
+  terraplenSolar:{cuad:2, cost:()=>({piedra:2, madera:2}), valid:(x, i)=>x.t===SOLAR && junto_agua(i), casa:true,
+    apply:(x, i)=>terraplen(i)},
   observatorio:{cuad:2, cost:()=>({madera:4, dinero:30}), valid:(x)=>x.t==='P' && !hasType('O'),
     apply:(x)=>{ x.t='O'; }},
   aljibe:{cuad:2, cost:()=>({piedra:3, madera:2}), valid:(x)=>x.t==='P' && !hasType('W'),
     apply:(x)=>{ x.t='W'; }}
 };
 
+// El terraplén sólo se puede hacer junto al río o al mar.
+function junto_agua(i) { return i != null && nb4(i).some(j => T(j).t === 'R' || T(j).t === 'M'); }
+
 // Nombre corto de lo que se construye en una casilla (el dique en el mar es una escollera).
-export const construccion = (k, casilla) => k === 'dique' && casilla && casilla.t === 'M' ? 'escollera' : k;
+export const construccion = (k, casilla) => k === 'dique' && casilla && casilla.t === 'M' ? 'escollera' : (k === 'terraplenSolar' ? 'terraplen' : k);
 export const nombreConstruccion = (id) => t('construcciones.' + id);
 
 export function costLabel(a) {
