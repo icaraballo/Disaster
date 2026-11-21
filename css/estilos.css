@@ -45,6 +45,9 @@ button{font-family:inherit;color:inherit}
 .b-evac{top:-4px;left:-4px;background:#2F6B37}
 .b-rayo{top:2px;left:2px;width:13px;height:13px;background:#E8B730}
 .b-fam{bottom:-4px;right:-4px;background:#2F6B9A}
+.medalla-chip{font-size:10px;padding:2px 7px;vertical-align:middle}
+.m-bronce.medalla-chip{background:#9C6A3A}.m-plata.medalla-chip{background:#7E8A96}.m-oro.medalla-chip{background:#B8901E}
+.card.medalla{border-left:6px solid #9C6A3A}.card.medalla.m-plata{border-left-color:#7E8A96}.card.medalla.m-oro{border-left-color:#B8901E}
 .dique{position:absolute;left:4px;right:4px;bottom:4px;height:7px;border-radius:3px;background:#6B5B45;pointer-events:none}
 .dique.cheap{background:repeating-linear-gradient(90deg,#6B5B45 0 4px,#C9B48F 4px 7px)}
 .muro{position:absolute;left:3px;right:3px;top:45%;height:6px;border-radius:2px;background:#8E8A84;pointer-events:none}

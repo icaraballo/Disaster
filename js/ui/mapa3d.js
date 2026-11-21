@@ -171,7 +171,7 @@ function sincronizar(modo) {
   // 2. impacto: ambiente y sucesos
   if (modo === 'impact' && G.impact) {
     if (M.impactoRef !== G.impact) { limpiarImpacto(); M.impactoRef = G.impact; M.tipoImpacto = G.fc.real.slice(); asignarDuenos(); empezarImpacto(); }
-    const n = G.impact.shown, instantaneo = (n - M.procesados) > 1;
+    const n = Math.min(G.impact.shown, G.impact.events.length), instantaneo = (n - M.procesados) > 1;
     for (let k = M.procesados; k < n; k++) aplicarEvento(G.impact.events[k], M.grupoOwner[k], !instantaneo || k === n - 1 ? !instantaneo : false);
     M.procesados = n;
   } else {

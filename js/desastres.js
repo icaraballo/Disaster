@@ -2,7 +2,7 @@
 // ({text, kind, tiles}) a una lista que la vista va enseñando poco a poco.
 import { BUILD } from '../data/casillas.js';
 import { SLIDE_MULT } from '../data/desastres.js';
-import { DIQUE_ARRASTRE, DIQUE_BARATO_CEDE, TERRAPLEN_ARRASTRE, PASA_AGUA, VECINOS_CASA_DANADA, VECINOS_EVACUADA, MORAL_SIN_REPARAR, riadaP, temporalP, aludP, deslizamientoP, deslizamientoCasillas, rayosTormenta, focosIncendio } from '../data/balance.js';
+import { DIQUE_ARRASTRE, DIQUE_BARATO_CEDE, TERRAPLEN_ARRASTRE, PASA_AGUA, VECINOS_CASA_DANADA, VECINOS_EVACUADA, MORAL_SIN_REPARAR, desanimados, riadaP, temporalP, aludP, deslizamientoP, deslizamientoCasillas, rayosTormenta, focosIncendio } from '../data/balance.js';
 import { RI, shuffle, pick } from './azar.js';
 import { cap, clamp, nb4, cheb, ao, pl } from './util.js';
 import { COLS, N } from '../data/casillas.js';
@@ -19,8 +19,8 @@ function tileName(i) {
 }
 const save = (k, n) => { G.stats.saves[k] = (G.stats.saves[k] || 0) + (n || 1); };
 
-// Daña la casilla i. Devuelve los sucesos que cuenta el parte.
-function damage(i, cause, ctx) {
+// Daña la casilla i. Devuelve los sucesos que cuenta el parte. (Exportada para los tests.)
+export function damage(i, cause, ctx) {
   const x = T(i), r = G.res, nm = tileName(i), out = [];
   if ((cause === 'agua' || cause === 'mar') && x.sacos) { x.sacos = false; save('sacos'); return [{text:t('log.sacos', {lugar: nm}), kind:'good', tiles:[[i,'ok']]}]; }
   const already = x.dmg; x.dmg = true; ctx.dmg++; G.stats.cause[cause] = (G.stats.cause[cause] || 0) + 1;
@@ -106,7 +106,7 @@ function waterFlood(srcList, p0, cause, ev, ctx, isRiver) {
   if (flooded.size) ev.push({text:t(isRiver ? 'log.inundaRio' : 'log.inundaMar', {n: flooded.size, s: pl(flooded.size)}), kind:'warn', tiles:[...flooded].map(i => [i,'flood'])});
   else ev.push({text:t(isRiver ? 'log.noInundaRio' : 'log.noInundaMar'), kind:'good'});
   tapados.forEach(i => { save('sacos'); ev.push({text:t('log.sacosAgujero', {lugar: tileName(i)}), kind:'good', tiles:[[i,'ok']]}); });
-  pasa.forEach(([a, b]) => ev.push({text:t('log.aguaPasa', {lugar: tileName(a), destino: tileName(b)}), kind:'warn', tiles:[[a,'flood'],[b,'flood']]}));
+  pasa.forEach(([a, b]) => { const d = tileName(b), al = d.startsWith('el '); ev.push({text:t(al ? 'log.aguaPasaAl' : 'log.aguaPasa', {lugar: tileName(a), destino: al ? d.slice(3) : d}), kind:'warn', tiles:[[a,'flood'],[b,'flood']]}); });
   [...flooded].filter(i => BUILD.has(T(i).t)).forEach(i => damage(i, cause, ctx).forEach(e => ev.push(e)));
 }
 
@@ -251,6 +251,8 @@ export function startImpact() {
   if (G.res.comida >= need) { G.res.comida -= need; G.res.moral = clamp(G.res.moral + 1, 0, 100); ev.push({text:t('log.consume', {n: need}), kind:'info'}); }
   else { G.res.comida = 0; G.res.moral = clamp(G.res.moral - 15, 0, 100); G.stats.cause.hambre = (G.stats.cause.hambre || 0) + 1; ev.push({text:t('log.hambre'), kind:'bad'}); }
   if (ctx.dmg === 0) { G.res.moral = clamp(G.res.moral + 5, 0, 100); ev.push({text:t('log.alivio'), kind:'good'}); }
+  const nDes = desanimados(G.res.moral);
+  if (nDes) ev.push({text:t(nDes === 1 ? 'log.desanimo1' : 'log.desanimoN', {n: nDes, moral: G.res.moral}), kind:'cascade'});
   G.tiles.forEach(x => { x.evac = false; x.cheap = false; });
   G.cheapDique = false;
   G.workers = G.workers.filter(w => !w.temp);

@@ -132,7 +132,7 @@ export function pasaAgua(i) {
   nb4(i).forEach(s => { const tt = T(s).t; if (tt !== 'R' && tt !== 'M') return; const j = detras(s, i); if (j != null && T(j).t !== TERRAPLEN && !out.includes(j)) out.push(j); });
   return out;
 }
-const tileNameCorto = (j) => T(j).t === 'C' ? nombreCasa(j) : t('casillas.' + T(j).t + '.nombre').toLowerCase();
+const tileNameCorto = (j) => T(j).t === 'C' ? nombreCasa(j) : (['A','G','O','W','U','V'].includes(T(j).t) ? t('nombres.' + T(j).t) : t('casillas.' + T(j).t + '.nombre').toLowerCase());
 
 // En qué estado está la casilla i: lista de {text, bad}.
 export function tileState(i) {

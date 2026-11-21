@@ -5,7 +5,7 @@ import { ALCALDES } from '../../data/alcaldes.js';
 import { DIS } from '../../data/desastres.js';
 import { OFICIOS, JOBS } from '../../data/gente.js';
 import { BUILD, BG, ICON } from '../../data/casillas.js';
-import { TEMPORADA } from '../../data/balance.js';
+import { TEMPORADA, VECINOS_MINIMOS, MEDALLA_PLATA, MEDALLA_ORO } from '../../data/balance.js';
 import { cap, esc, ao, pl, todayKey } from '../util.js';
 import { t } from '../i18n.js';
 import { G, T, townName, ofName, aytoDown, granjasOk, availableWorkers, freeWorkers, W } from '../estado.js';
@@ -103,9 +103,16 @@ function resHTML(proj) {
   return '<div class="res">' + cells.map(c => '<div><div class="k">' + c[0] + '</div><div class="v">' + c[1] + '</div></div>').join('') + '</div>';
 }
 
-function forecastOptions() { const f = G.fc; return [[f.real, f.pReal], [f.decoy, 100 - f.pReal]].sort((a, b) => b[1] - a[1]); }
+function forecastOptions() { const f = G.fc; return [[f.real, f.pReal, f.hist[0], true], [f.decoy, 100 - f.pReal, 100 - f.hist[0], false]].sort((a, b) => b[1] - a[1]); }
+// «55 % → 70 %» si la previsión ya se ha afinado desde el primer turno.
+const pctAfinado = (p, p0) => (p0 != null && p0 !== p ? p0 + '% → ' : '') + p + '%';
+// Precisión con sus fuentes (T-12 §B.6): «Precisión media · Observatorio ✓ · Radar ✗ · Meteoróloga ✗».
+function precisionHTML() {
+  const f = G.fc, fu = f.fuentes || {}, ok = (b) => b ? '✓' : '✗';
+  return u('parte.precisionFuentes', {precision: u('parte.nivel.' + f.lvl), obs: ok(fu.obs), radar: ok(fu.radar), alc: ok(fu.alc)});
+}
 function forecastBars() {
-  return forecastOptions().map(([k, p]) => '<div style="display:flex;flex-direction:column;gap:4px"><div class="row" style="font-size:14px"><span>' + optName(k) + (k.length > 1 ? ' <span class="chip" style="background:#7A5A9E;font-size:10px;padding:2px 7px">' + u('combinado') + '</span>' : '') + '</span><b>' + p + '%</b></div><div class="bar"><div style="width:' + p + '%;background:' + DIS[k[0]].color + '"></div></div></div>').join('');
+  return forecastOptions().map(([k, p, p0]) => '<div style="display:flex;flex-direction:column;gap:4px"><div class="row" style="font-size:14px"><span>' + optName(k) + (k.length > 1 ? ' <span class="chip" style="background:#7A5A9E;font-size:10px;padding:2px 7px">' + u('combinado') + '</span>' : '') + '</span><b>' + pctAfinado(p, p0) + '</b></div><div class="bar"><div style="width:' + p + '%;background:' + DIS[k[0]].color + '"></div></div></div>').join('');
 }
 
 function warnings() {
@@ -191,6 +198,9 @@ function infoHTML() {
   return h + '</div>';
 }
 
+// La mejor medalla de un pueblo, como etiqueta pequeña (nada si aún no tiene).
+const medallaChip = (m) => m ? ' <span class="chip medalla-chip m-' + m + '">' + u('medallas.' + m) + '</span>' : '';
+
 const topOf = (o) => { const ks = Object.keys(o).filter(k => o[k] > 0).sort((a, b) => o[b] - o[a]); return ks.length ? [ks[0], o[ks[0]]] : null; };
 
 function menuHTML() {
@@ -200,7 +210,7 @@ function menuHTML() {
   h += '<button class="btn ghost" data-go="daily">' + u('menu.reto') + '<small>' + u('menu.retoSub', {pueblo: t('pueblos.' + dTown + '.nombre'), alcalde: tituloAlc(dAlc)}) + '</small></button>';
   h += ranking();
   h += '<button class="btn ghost" data-go="howto">' + u(UI.howto ? 'menu.ocultarReglas' : 'menu.comoSeJuega') + '</button>';
-  if (UI.howto) h += '<div class="card"><ul class="rules">' + ['aviso','prep','ojo','impacto','entre','pierdes'].map(k => '<li>' + u('reglas.' + k) + '</li>').join('') + '</ul></div>';
+  if (UI.howto) h += '<div class="card"><ul class="rules">' + ['aviso','prep','ojo','impacto','casas','entre','pierdes','medallas'].map(k => '<li>' + u('reglas.' + k, {n: VECINOS_MINIMOS, plata: MEDALLA_PLATA.vecinos, plataMoral: MEDALLA_PLATA.moral, oro: MEDALLA_ORO.vecinos, oroMoral: MEDALLA_ORO.moral}) + '</li>').join('') + '</ul></div>';
   const nT = Object.keys(TOWNS).filter(unlockedTown).length, nA = ALCALDES.filter(unlockedAlc).length;
   h += '<div class="card" style="display:flex;flex-direction:column;gap:10px"><div class="label">' + u('menu.progreso') + '</div><div style="font-size:14px;line-height:1.5">' + u('menu.progresoDatos', {pueblos: nT, pueblosTotal: Object.keys(TOWNS).length, alcaldes: nA, alcaldesTotal: ALCALDES.length, temporadas: PROG.seasons, mejor: PROG.best || 0}) + '</div>' +
     '<label class="toggle"><input type="checkbox" data-test="1"' + (PROG.test ? ' checked' : '') + '> ' + u('menu.modoPrueba') + '</label></div>';
@@ -212,7 +222,7 @@ function setupHTML() {
   h += '<div class="label">' + u('setup.pueblo') + '</div><div style="display:flex;flex-direction:column;gap:8px">';
   Object.keys(TOWNS).forEach(k => {
     const tw = TOWNS[k], ok = unlockedTown(k), nom = t('pueblos.' + k + '.nombre');
-    h += '<button class="pick-card' + (UI.town === k ? ' sel' : '') + (ok ? '' : ' locked') + '" ' + (ok ? 'data-town="' + k + '"' : 'disabled') + '><div class="sw" style="background:' + tw.color + '">' + nom.charAt(0) + '</div><div><div class="n">' + nom + ' <span class="muted" style="font-weight:500;font-size:12px">· ' + t('pueblos.' + k + '.tipo') + '</span></div><div class="dd">' + (ok ? t('pueblos.' + k + '.desc') : u('setup.bloqueado', {cond: t('pueblos.' + k + '.desbloqueo')})) + '</div></div></button>';
+    h += '<button class="pick-card' + (UI.town === k ? ' sel' : '') + (ok ? '' : ' locked') + '" ' + (ok ? 'data-town="' + k + '"' : 'disabled') + '><div class="sw" style="background:' + tw.color + '">' + nom.charAt(0) + '</div><div><div class="n">' + nom + ' <span class="muted" style="font-weight:500;font-size:12px">· ' + t('pueblos.' + k + '.tipo') + '</span>' + medallaChip((PROG.medallas || {})[k]) + '</div><div class="dd">' + (ok ? t('pueblos.' + k + '.desc') : u('setup.bloqueado', {cond: t('pueblos.' + k + '.desbloqueo')})) + '</div></div></button>';
   });
   h += '</div><div class="label">' + u('setup.alcalde') + '</div><div style="display:flex;flex-direction:column;gap:8px">';
   ALCALDES.forEach(a => {
@@ -232,6 +242,7 @@ function forecastHTML() {
   h += '<h2 style="font-size:23px">' + u('parte.aviso.' + f.I) + '</h2>';
   h += forecastBars();
   h += '<div class="muted" style="font-size:13px;line-height:1.45">' + u('parte.intensidad', {puntos: '●'.repeat(f.I) + '○'.repeat(3 - f.I), precision: u('parte.precision.' + f.lvl)}) + '</div>';
+  h += '<div style="font-size:13px;line-height:1.45">' + precisionHTML() + '<br><span class="muted">' + u('parte.seAfina') + '</span></div>';
   if (G.alc === 'meteorologa' && G.schedule[G.idx + 1]) h += '<div style="font-size:13px;line-height:1.45">' + u('parte.intuye', {nombre: nombreAlc(ALCALDES.find(a => a.id === 'meteorologa')), que: optName(G.schedule[G.idx + 1].types)}) + '</div>';
   h += '</div>' + warnings();
   return h + '<button class="btn" data-go="prep">' + u('parte.empezar') + '</button>';
@@ -241,7 +252,7 @@ function prepHTML() {
   let h = headerHTML();
   h += '<div class="row"><h2 style="font-size:20px">' + u('prep.titulo') + '</h2><div class="muted" style="font-size:13px">' + u('prep.turno', {n: G.turn, total: G.maxTurns}) + '</div></div>';
   h += resHTML(production());
-  h += '<div class="row" style="font-size:12.5px;align-items:flex-start"><span><span class="muted">' + u('prep.prevision') + '</span> ' + forecastOptions().map(([k, p]) => optName(k) + ' ' + p + '%').join(' · ') + '</span>' + heatBtn() + '</div>';
+  h += '<div class="row" style="font-size:12.5px;align-items:flex-start"><span><span class="muted">' + u('prep.prevision') + '</span> ' + forecastOptions().map(([k, p, p0]) => optName(k) + ' ' + pctAfinado(p, p0)).join(' · ') + '<br><span class="muted">' + precisionHTML() + (G.turn < G.maxTurns ? ' · ' + u('prep.seAfina') : '') + '</span></span>' + heatBtn() + '</div>';
   h += '<div class="mapwrap">' + mapHTML('prep') + '</div>' + heatLegend();
   h += '<div class="msg">' + (G.msg || '') + '</div>' + (G.sel ? '' : infoHTML());
   h += '<div class="label">' + u('prep.tuGente') + '</div>' + peopleHTML();
@@ -258,6 +269,7 @@ function prepHTML() {
   });
   h += '</div><div class="label">' + u('prep.construir') + '</div><div class="acts">';
   for (const k in ACTIONS) {
+    if (ACTIONS[k].casa && !G.tiles.some((x, i) => ACTIONS[k].valid(x, i))) continue;
     const plan = planObra(k);
     h += '<button class="act' + (G.sel === k ? ' sel' : '') + (plan.completo ? '' : ' low') + '" data-act="' + k + '"><span class="n">' + t('acciones.' + k + '.nombre') + '</span><span class="c">' + costLabelObra(k) + '</span>'
       + (plan.albanil ? '<span class="d">' + u('prep.ahorra', {nombre: esc(plan.albanil.name), material: t('recursos.' + plan.material)}) + '</span>' : '') + '</button>';
@@ -311,6 +323,7 @@ function eventHTML() {
 function endHTML() {
   const won = !G.lost, hist = G.stats.hist;
   let h = '<div style="display:flex;flex-direction:column;gap:6px;margin-top:8px"><div class="label">' + u('fin.titulo') + (G.daily ? u('suf.reto') : '') + '</div><h1 style="font-size:30px">' + u(won ? 'fin.sobrevive' : 'fin.noAguanta', {pueblo: townName()}) + '</h1><div class="muted" style="font-size:15px">' + u(won ? 'fin.superado' : 'fin.llegaste', {total: TEMPORADA, n: G.idx + 1}) + '</div></div>';
+  if (G.medalla) h += '<div class="card row medalla m-' + G.medalla + '"><div><div class="label">' + u('fin.medalla') + '</div><div style="font-family:Rubik,sans-serif;font-weight:700;font-size:24px">' + u('medallas.' + G.medalla) + '</div><div class="muted" style="font-size:13px">' + u('medallas.' + G.medalla + 'Por', {plata: MEDALLA_PLATA.vecinos, plataMoral: MEDALLA_PLATA.moral, oro: MEDALLA_ORO.vecinos, oroMoral: MEDALLA_ORO.moral}) + '</div></div><div style="text-align:right;font-size:13px">' + (G.medallaNueva ? '<b style="color:#2F6B37">' + u('fin.medallaNueva') + '</b>' : u('fin.medallaMejor', {medalla: u('medallas.' + ((PROG.medallas || {})[G.town] || G.medalla))})) + '</div></div>';
   h += '<div class="card row"><div><div class="label">' + u('fin.puntuacion') + '</div><div style="font-family:Rubik,sans-serif;font-weight:700;font-size:34px">' + G.final + '</div></div><div style="text-align:right;font-size:13px" class="muted">' + (G.record ? '<b style="color:#2F6B37">' + u('fin.record') + '</b>' : u('fin.recordActual', {n: PROG.best})) + '</div></div>';
   if (G.unlocked && G.unlocked.length) h += '<div class="goodline"><b>' + u('fin.desbloqueado') + '</b> ' + G.unlocked.join(' · ') + '</div>';
   if (G.daily) { h += G.submitted ? '<div class="goodline">' + u('fin.enRanking') + '</div>' : (G.submitFail ? '<div class="warnline">' + u('fin.rankingFallo') + '</div>' : ''); h += ranking(); }
@@ -323,7 +336,9 @@ function endHTML() {
     '<div class="stat"><div class="k">' + u('fin.masDanio') + '</div><div style="font-weight:600;font-size:14px;margin-top:2px">' + (tc ? cap(t('causas.' + tc[0])) + ' (' + tc[1] + ')' : u('fin.nada')) + '</div></div>' +
     '<div class="stat"><div class="k">' + u('fin.masSalvo') + '</div><div style="font-weight:600;font-size:14px;margin-top:2px">' + (ts ? cap(t('salvaciones.' + ts[0])) + ' (' + ts[1] + ')' : u('fin.suerte')) + '</div></div>' +
     '<div class="stat"><div class="k">' + u('fin.masConstruiste') + '</div><div style="font-weight:600;font-size:14px;margin-top:2px">' + (tb ? nombreConstruccion(tb[0]) + ' (' + tb[1] + ')' : u('fin.nada')) + '</div></div>' +
-    '<div class="stat"><div class="k">' + u('fin.tuGente') + '</div><div style="font-weight:600;font-size:14px;margin-top:2px">' + u('fin.gente', {siguen: G.workers.filter(w => !w.gone).length, fueron: G.workers.filter(w => w.gone).length}) + '</div></div></div>';
+    '<div class="stat"><div class="k">' + u('fin.tuGente') + '</div><div style="font-weight:600;font-size:14px;margin-top:2px">' + u('fin.gente', {siguen: G.workers.filter(w => !w.gone).length, fueron: G.workers.filter(w => w.gone).length}) + '</div></div>' +
+    '<div class="stat"><div class="k">' + u('fin.familias') + '</div><div style="font-weight:600;font-size:14px;margin-top:2px">' + (G.stats.familias || 0) + '</div></div>' +
+    '<div class="stat"><div class="k">' + u('fin.ruinas') + '</div><div style="font-weight:600;font-size:14px;margin-top:2px">' + G.tiles.filter(x => x.t === 'U' || x.t === 'V').length + '</div></div></div>';
   h += '<div class="mapwrap">' + mapHTML('view') + '</div>' + infoHTML();
   if (G.chosen.length) h += '<div class="card"><div class="label" style="margin-bottom:6px">' + u('fin.mejoras') + '</div><div style="font-size:14px;line-height:1.5">' + G.chosen.join(' · ') + '</div></div>';
   return h + '<button class="btn" data-go="menu">' + u('fin.volver') + '</button>';

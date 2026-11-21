@@ -172,7 +172,10 @@
     "sinReparar": "Lo que sigue sin reparar desanima al pueblo: −{n} de moral.",
     "terraplenFrena": "El terraplén frena el agua.",
     "sacosAgujero": "Los sacos tapan el agujero de {lugar}.",
+    "desanimo1": "Con la moral en {moral}%, una persona se desanimará y no trabajará en la próxima preparación si no sube.",
+    "desanimoN": "Con la moral en {moral}%, {n} personas se desanimarán y no trabajarán en la próxima preparación si no sube.",
     "aguaPasa": "El agua atraviesa {lugar} y llega a {destino}.",
+    "aguaPasaAl": "El agua atraviesa {lugar} y llega al {destino}.",
     "medicoEvita": "La atención médica evita que {nombre} acabe herid{a}.",
     "heridoOtraVez": "{nombre} ({oficio}) vuelve a resultar herid{a} y se marcha del pueblo.",
     "heridoCasa": "{nombre} ({oficio}), que vive ahí, resulta herid{a}: no podrá trabajar en la próxima preparación.",
@@ -259,8 +262,8 @@
     "casaLlena": "2 familias: si se daña, la familia acogida se va del pueblo.",
     "aSolarFamilia": "Si no haces nada, en el próximo desastre se quedará en solar y la familia acogida en {lugar} se irá del pueblo.",
     "aSolar": "Si no haces nada, en el próximo desastre se quedará en solar.",
-    "pasaMitad": "Agua: deja pasar la mitad del agua a {destino}.",
-    "pasaTodo": "Agua: deja pasar toda el agua a {destino}.",
+    "pasaMitad": "Agua: deja pasar la mitad del agua hacia {destino}.",
+    "pasaTodo": "Agua: deja pasar toda el agua hacia {destino}.",
     "pasaNada": "Agua: detrás no hay nada que se pueda inundar.",
     "terraplen": "No se inunda y el agua no pasa detrás."
   },
@@ -316,12 +319,14 @@
       "modoPrueba": "Modo prueba: todo desbloqueado"
     },
     "reglas": {
-      "aviso": "<b>Aviso:</b> el observatorio te dice qué puede venir, con probabilidades que pueden fallar. Al final de la temporada pueden llegar dos desastres a la vez.",
+      "aviso": "<b>Aviso:</b> el observatorio te dice qué puede venir, con probabilidades que pueden fallar. La previsión se afina en cada turno de la preparación; el observatorio, el radar y la meteoróloga la hacen más precisa. Desde el desastre 5 pueden llegar dos a la vez, y el último siempre es doble.",
       "prep": "<b>Preparación:</b> 3 turnos. Cada turno repartes a tu gente entre <b>producir</b> (talar, cantera, granja, recaudar) y <b>construir</b> sobre el mapa. Cada persona tiene un oficio que la hace mejor en algo.",
       "ojo": "<b>Ojo:</b> talar y sacar piedra debilitan la ladera. Los diques empujan el agua río abajo. Nada es gratis.",
       "impacto": "<b>Impacto:</b> ves qué aguanta. Si se daña la casa de alguien de tu gente, puede acabar herido. Si le vuelve a pasar, se marcha.",
-      "entre": "<b>Entre desastres:</b> eliges 1 mejora de 3 y a veces pasa algo en el pueblo que te obliga a decidir.",
-      "pierdes": "Pierdes si quedan menos de 22 vecinos, la moral llega a 0 o no queda nadie para trabajar. Toca el mapa para ver qué es cada casilla y usa el mapa de riesgo."
+      "casas": "<b>Casas:</b> una casa dañada que no reparas antes del siguiente desastre cae en <b>ruinas</b> y su familia se muda a otra casa (como mucho dos familias por casa). Si las ruinas siguen así otro desastre, quedan en <b>solar</b> y esa familia se va del pueblo. Junto al agua puedes hacer un <b>terraplén</b>: ruinas y solares dejan pasar el agua a la casilla de detrás.",
+    "entre": "<b>Entre desastres:</b> eliges 1 mejora de 3 y a veces pasa algo en el pueblo que te obliga a decidir.",
+      "pierdes": "Pierdes si quedan menos de {n} vecinos, la moral llega a 0 o no queda nadie para trabajar. Toca el mapa para ver qué es cada casilla y usa el mapa de riesgo.",
+    "medallas": "<b>Medallas:</b> bronce por aguantar los 8 desastres; plata si acabas con {plata} vecinos y {plataMoral}% de moral; oro con {oro} vecinos, {oroMoral}% de moral y ninguna casa en ruinas ni solar."
     },
     "ranking": {
       "titulo": "Ranking del reto de hoy",
@@ -407,12 +412,16 @@
       "intensidad": "Intensidad {puntos} · Precisión {precision}.",
       "precision": {"1": "baja: puede fallar bastante", "2": "media", "3": "alta"},
       "intuye": "<b>{nombre} intuye lo que vendrá después:</b> {que}.",
+      "precisionFuentes": "<b>Precisión {precision}</b> · Observatorio {obs} · Radar {radar} · Meteoróloga {alc}",
+      "nivel": {"1": "baja", "2": "media", "3": "alta"},
+      "seAfina": "La previsión se afina en cada turno: esperar da certeza, pero quita tiempo para preparar.",
       "empezar": "Empezar a preparar"
     },
     "prep": {
       "titulo": "Preparación",
       "turno": "Turno <b style=\"color:#23262B\">{n}</b> de {total}",
       "prevision": "Previsión:",
+    "seAfina": "se afina en el próximo turno",
       "tuGente": "Tu gente",
       "producir": "Producir · toca la mitad derecha para subir, la izquierda para bajar",
       "rinde": {
@@ -450,6 +459,12 @@
       "eligeMejora": "Elige una mejora"
     },
     "evento": {"mientras": "Mientras tanto, en el pueblo…"},
+    "medallas": {
+      "bronce": "Bronce", "plata": "Plata", "oro": "Oro",
+      "broncePor": "Has aguantado los 8 desastres.",
+      "plataPor": "Has aguantado con {plata} vecinos o más y {plataMoral}% de moral o más.",
+      "oroPor": "Con {oro} vecinos o más, {oroMoral}% de moral o más y ninguna casa en ruinas ni solar."
+    },
     "fin": {
       "titulo": "Fin de la temporada",
       "sobrevive": "¡{pueblo} ha sobrevivido!",
@@ -460,6 +475,11 @@
       "record": "¡Nuevo récord!",
       "recordActual": "Récord: {n}",
       "desbloqueado": "Has desbloqueado:",
+    "medalla": "Medalla",
+    "medallaNueva": "¡Tu mejor medalla en este pueblo!",
+    "medallaMejor": "Tu mejor aquí: {medalla}",
+    "familias": "Familias que se fueron",
+    "ruinas": "Ruinas y solares al final",
       "enRanking": "Tu puntuación está en el ranking de hoy.",
       "rankingFallo": "No se ha podido guardar tu puntuación en el ranking.",
       "graficaVecinos": "Vecinos a lo largo de la temporada",

@@ -54,7 +54,7 @@ function moverGente(origen, destino) {
 function seVaAcogida(casa, origen, ev) {
   const x = T(casa);
   x.huespedes = x.huespedes.filter(o => o !== origen);
-  if (T(origen).t === RUINAS) T(origen).acogidaEn = null;
+  if (T(origen) && T(origen).t === RUINAS) T(origen).acogidaEn = null;
   G.res.pop -= VECINOS_FAMILIA_SE_VA;
   G.stats.familias = (G.stats.familias || 0) + 1;
   moverGente(origen, null);
@@ -80,9 +80,10 @@ export function aRuinas(i, ev) {
   G.res.moral = clamp(G.res.moral - MORAL_RUINAS, 0, 100);
   const dest = elegirAcogida(i);
   if (dest != null) {
+    const nombre = nombreCasa(dest);   // antes de mudar a nadie, para que no se llame como quien llega
     T(dest).huespedes.push(i); x.acogidaEn = dest;
     moverGente(i, dest);
-    ev.push({text: t('log.familiaAcogida', {lugar: nombreCasa(dest)}), kind: 'warn', tiles: [[dest, 'acogida']]});
+    ev.push({text: t('log.familiaAcogida', {lugar: nombre}), kind: 'warn', tiles: [[dest, 'acogida']]});
   } else {
     G.res.pop -= VECINOS_FAMILIA_SE_VA;
     G.stats.familias = (G.stats.familias || 0) + 1;
