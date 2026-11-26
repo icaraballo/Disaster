@@ -5,21 +5,24 @@ import { ALCALDES } from '../../data/alcaldes.js';
 import { DIS } from '../../data/desastres.js';
 import { OFICIOS, JOBS } from '../../data/gente.js';
 import { BUILD, BG, ICON } from '../../data/casillas.js';
-import { TEMPORADA, VECINOS_MINIMOS, MEDALLA_PLATA, MEDALLA_ORO } from '../../data/balance.js';
+import { TEMPORADA, VECINOS_MINIMOS, MEDALLA_PLATA, MEDALLA_ORO,
+  AGRICULTOR_GRANJA_BONUS, AGRICULTOR_TALAR_MENOS, GRANJA_REFORZADA_COMIDA,
+  TESORERO_RECAUDAR_BONUS, TESORERO_MORAL_RECAUDAR } from '../../data/balance.js';
 import { cap, esc, ao, pl, todayKey } from '../util.js';
 import { t } from '../i18n.js';
-import { G, T, townName, ofName, aytoDown, granjasOk, availableWorkers, freeWorkers, W } from '../estado.js';
+import { G, T, townName, ofName, aytoDown, granjasOk, granjasReforzadasOk, availableWorkers, freeWorkers, W } from '../estado.js';
 import { familias, costeRefugio, plazasUsadas, plazasRefugio, refugioOk, idxRefugio } from '../casas.js';
 import { ACTIONS, costLabel, costLabelObra, planObra, construccion, nombreConstruccion } from '../acciones.js';
 import { production } from '../turnos.js';
 import { riskMap, tileRisks, tileState } from '../riesgo.js';
 import { retoDelDia } from '../partida.js';
 import { PROG, unlockedTown, unlockedAlc } from '../progreso.js';
+import { leerResumenGuardado, falloGuardado } from '../guardado.js';
 import { CAPS } from '../ranking.js';
 import { lineChart, barChart } from './graficos.js';
 
 // Estado de la pantalla (no es de la partida): qué pantalla, reglas desplegadas, elección en «Nueva temporada».
-export const UI = {screen:'menu', howto:false, town:'villarrio', alc:'ingeniera', persona:null, mapa3d:false};
+export const UI = {screen:'menu', howto:false, town:'villarrio', alc:'ingeniera', persona:null, mapa3d:false, velImpacto:1};
 
 const u = (k, v) => t('ui.' + k, v);
 const nombreAlc = (a) => t('alcaldes.' + a.id + '.nombre');
@@ -62,6 +65,7 @@ function mapHTML(mode) {
     const label = canPick ? ' aria-label="' + u('mapa.accionAqui', {accion: nombreConstruccion(construccion(G.sel, x))}) + '"' : ' aria-label="' + t('casillas.' + base.t + '.nombre') + '"';
     h += '<button class="' + cls + '" style="background:' + BG[base.t] + '" data-tile="' + i + '"' + (clickable ? '' : ' disabled') + label + '>';
     h += svg(base.t);
+    if (x.contra && mode !== 'impact') h += '<div class="contra"></div>';
     if (x.dique) h += '<div class="dique' + (x.cheap ? ' cheap' : '') + '"></div>';
     if (x.muro) h += '<div class="muro"></div>';
     if (x.sacos && mode !== 'impact') h += '<div class="sacos"></div>';
@@ -69,6 +73,7 @@ function mapHTML(mode) {
     if (heat && BUILD.has(x.t)) { const r = heat[i]; if (r >= 0.02) h += '<div class="ov heat" style="background:rgba(176,52,14,' + (0.18 + 0.7 * Math.min(1, r)).toFixed(2) + ')"><span>' + Math.round(r * 100) + '%</span></div>'; }
     if (x.rayo) h += '<div class="badge b-rayo"><svg width="8" height="10" viewBox="0 0 10 12" aria-hidden="true"><path d="M6 0 L1 7 L5 7 L4 12 L9 5 L5 5 Z" fill="#23262B"/></svg></div>';
     if (x.evac && mode !== 'impact') h += '<div class="badge b-evac">E</div>';
+    if (x.reforzada && x.t === 'G') h += '<div class="badge b-ref">+</div>';
     if (mode !== 'impact' && familias(x) >= 2) h += '<div class="badge b-fam" title="' + esc(t('estado.familias', {n: 2, s: 's'})) + '">2</div>';
     if (dmgShown && BUILD.has(base.t)) h += '<div class="badge b-dmg">✕</div>';
     else if (o.has('ok')) h += '<div class="badge b-ok">✓</div>';
@@ -192,8 +197,8 @@ function infoHTML() {
     h += '<div class="label">' + u('ficha.quePuedes') + '</div>';
     if (work) h += '<div style="font-size:13px;line-height:1.4">' + work + '</div>';
     if (acts.length) {
-      if (G.phase === 'prep') h += '<div style="display:flex;gap:6px;flex-wrap:wrap">' + acts.map(k => '<button class="doat" data-doat="' + k + '">' + (k === 'dique' ? nombreConstruccion(construccion(k, x)) : t('acciones.' + k + '.nombre')) + ' <span>' + costLabelObra(k) + '</span></button>').join('') + '</div>';
-      else h += '<div style="font-size:13px;line-height:1.4">' + acts.map(k => t('acciones.' + k + '.nombre') + ' (' + costLabel(ACTIONS[k]) + ')').join(' · ') + ' <span class="muted">' + u('ficha.enPreparacion') + '</span></div>';
+      if (G.phase === 'prep') h += '<div style="display:flex;gap:6px;flex-wrap:wrap">' + acts.map(k => '<button class="doat" data-doat="' + k + '">' + (k === 'dique' ? nombreConstruccion(construccion(k, x)) : t('acciones.' + k + '.nombre')) + ' <span>' + costLabelObra(k, i) + '</span></button>').join('') + '</div>';
+      else h += '<div style="font-size:13px;line-height:1.4">' + acts.map(k => t('acciones.' + k + '.nombre') + ' (' + costLabel(ACTIONS[k], x) + ')').join(' · ') + ' <span class="muted">' + u('ficha.enPreparacion') + '</span></div>';
     }
   }
   if (risks.length) h += '<div class="label">' + u('ficha.quePasar') + '</div><div class="log">' + risks.map(([k, s]) => '<div class="e k-' + k + '" style="font-size:13px;animation:none"><div class="dot"></div><div>' + s + '</div></div>').join('') + '</div>';
@@ -207,8 +212,14 @@ const topOf = (o) => { const ks = Object.keys(o).filter(k => o[k] > 0).sort((a, 
 
 function menuHTML() {
   const dk = todayKey(), dia = retoDelDia(dk), dTown = dia.town, dAlc = ALCALDES.find(a => a.id === dia.alc);
+  const sav = leerResumenGuardado();
   let h = '<div style="display:flex;flex-direction:column;gap:6px;margin-top:8px"><div class="label">' + u('menu.prototipo') + '</div><h1 style="font-size:34px">' + u('titulo') + '</h1><div class="muted" style="font-size:15px">' + u('menu.subtitulo', {n: TEMPORADA}) + '</div></div>';
-  h += '<button class="btn" data-go="setup">' + u('menu.nueva') + '<small>' + u('menu.nuevaSub') + '</small></button>';
+  if (falloGuardado) h += '<div class="warnline">' + (falloGuardado === 'guardar' ? u('menu.falloGuardar') : u('menu.falloCargar')) + '</div>';
+  if (sav) {
+    const sAlc = ALCALDES.find(a => a.id === sav.alc);
+    h += '<button class="btn" data-go="continue">' + u('menu.continuar') + '<small>' + u('menu.continuarSub', {pueblo: t('pueblos.' + sav.town + '.nombre'), alcalde: tituloAlc(sAlc), n: Math.min(sav.idx + 1, TEMPORADA), total: TEMPORADA}) + (sav.daily ? u('suf.reto') : '') + '</small></button>';
+  }
+  h += '<button class="btn' + (sav ? ' ghost' : '') + '" data-go="setup">' + u('menu.nueva') + '<small>' + u('menu.nuevaSub') + '</small></button>';
   h += '<button class="btn ghost" data-go="daily">' + u('menu.reto') + '<small>' + u('menu.retoSub', {pueblo: t('pueblos.' + dTown + '.nombre'), alcalde: tituloAlc(dAlc)}) + '</small></button>';
   h += ranking();
   h += '<button class="btn ghost" data-go="howto">' + u(UI.howto ? 'menu.ocultarReglas' : 'menu.comoSeJuega') + '</button>';
@@ -254,13 +265,19 @@ function prepHTML() {
   let h = headerHTML();
   h += '<div class="row"><h2 style="font-size:20px">' + u('prep.titulo') + '</h2><div class="muted" style="font-size:13px">' + u('prep.turno', {n: G.turn, total: G.maxTurns}) + '</div></div>';
   h += resHTML(production());
-  h += '<div class="row" style="font-size:12.5px;align-items:flex-start"><span><span class="muted">' + u('prep.prevision') + '</span> ' + forecastOptions().map(([k, p, p0]) => optName(k) + ' ' + pctAfinado(p, p0)).join(' · ') + '<br><span class="muted">' + precisionHTML() + (G.turn < G.maxTurns ? ' · ' + u('prep.seAfina') : '') + '</span></span>' + heatBtn() + '</div>';
+  const prox = G.alc === 'meteorologa' && G.schedule[G.idx + 1] ? '<br><span class="muted">' + u('prep.intuye', {que: optName(G.schedule[G.idx + 1].types)}) + '</span>' : '';
+  h += '<div class="row" style="font-size:12.5px;align-items:flex-start"><span><span class="muted">' + u('prep.prevision') + '</span> ' + forecastOptions().map(([k, p, p0]) => optName(k) + ' ' + pctAfinado(p, p0)).join(' · ') + '<br><span class="muted">' + precisionHTML() + (G.turn < G.maxTurns && G.fc.pReal < 100 ? ' · ' + u('prep.seAfina') : '') + '</span>' + prox + '</span>' + heatBtn() + '</div>';
   h += '<div class="mapwrap">' + mapHTML('prep') + '</div>' + heatLegend();
   h += '<div class="msg">' + (G.msg || '') + '</div>' + (G.sel ? '' : infoHTML());
   h += '<div class="label">' + u('prep.tuGente') + '</div>' + peopleHTML();
   h += '<div class="label">' + u('prep.producir') + '</div><div class="jobs">';
   const free = freeWorkers().length;
-  const yields = {talar:u('prep.rinde.talar'), cantera:u('prep.rinde.cantera'), granja:u('prep.rinde.granja', {n: granjasOk() >= 2 ? 2 : granjasOk(), sequia: G.dryFarm ? u('prep.rinde.sequia') : ''}), recaudar:u('prep.rinde.recaudar')};
+  const gOk = granjasOk(), bGranja = gOk >= 2 ? 2 : gOk, gRef = granjasReforzadasOk();
+  const rindeTalar = 2 - (G.alc === 'agricultor' ? AGRICULTOR_TALAR_MENOS : 0) + (G.perks.carpinteros ? 1 : 0);
+  const rindeGranja = bGranja > 0 ? bGranja + (G.alc === 'agricultor' ? AGRICULTOR_GRANJA_BONUS : 0) + gRef * GRANJA_REFORZADA_COMIDA : 0;
+  const rindeDinero = 15 + (G.alc === 'tesorero' ? TESORERO_RECAUDAR_BONUS : 0);
+  const rindeMoral = G.alc === 'tesorero' ? TESORERO_MORAL_RECAUDAR : 2;
+  const yields = {talar:u('prep.rinde.talar', {n: rindeTalar}), cantera:u('prep.rinde.cantera'), granja:u('prep.rinde.granja', {n: rindeGranja, sequia: G.dryFarm && !gRef ? u('prep.rinde.sequia') : ''}), recaudar:u('prep.rinde.recaudar', {dinero: rindeDinero, moral: rindeMoral})};
   JOBS.forEach(k => {
     const n = t('trabajos.' + k);
     const who = G.alloc[k].map(id => W(id).name).join(', ');
@@ -270,14 +287,17 @@ function prepHTML() {
       + '<button class="half r" data-job="' + k + '" data-d="1" aria-label="' + esc(u('prep.anadir', {trabajo: n})) + '"' + (free > 0 ? '' : ' disabled') + '><span aria-hidden="true">+</span></button></div>';
   });
   h += '</div><div class="label">' + u('prep.construir') + '</div><div class="acts">';
+  const alcColor = (ALCALDES.find(a => a.id === G.alc) || {}).color || '#7A5A9E';
   for (const k in ACTIONS) {
-    if (ACTIONS[k].casa && !G.tiles.some((x, i) => ACTIONS[k].valid(x, i))) continue;
+    const act = ACTIONS[k];
+    if (act.alc && act.alc !== G.alc) continue;
+    if ((act.casa || act.alc) && !G.tiles.some((x, i) => act.valid(x, i))) continue;
     const plan = planObra(k);
-    h += '<button class="act' + (G.sel === k ? ' sel' : '') + (plan.completo ? '' : ' low') + '" data-act="' + k + '"><span class="n">' + t('acciones.' + k + '.nombre') + '</span><span class="c">' + costLabelObra(k) + '</span>'
+    h += '<button class="act' + (act.alc ? ' esp' : '') + (G.sel === k ? ' sel' : '') + (plan.completo ? '' : ' low') + '"' + (act.alc && G.sel !== k ? ' style="border-left-color:' + alcColor + '"' : '') + ' data-act="' + k + '"><span class="n">' + t('acciones.' + k + '.nombre') + '</span><span class="c">' + costLabelObra(k) + '</span>'
       + (plan.albanil ? '<span class="d">' + u('prep.ahorra', {nombre: esc(plan.albanil.name), material: t('recursos.' + plan.material)}) + '</span>' : '') + '</button>';
   }
   h += '</div>';
-  if (G.sel) h += '<div class="hint">' + t('acciones.' + G.sel + '.desc') + (G.workers.some(w => w.of === 'albanil' && !w.gone) ? ' ' + u('prep.albanil') : '') + '</div>';
+  if (G.sel) h += '<div class="hint">' + t('acciones.' + G.sel + '.desc') + (G.workers.some(w => w.of === 'albanil' && !w.gone) && ['piedra','madera'].some(m => (ACTIONS[G.sel].cost()[m] || 0) > 0) ? ' ' + u('prep.albanil') : '') + '</div>';
   h += warnings();
   return h + '<button class="btn" data-go="endturn">' + u(G.turn < G.maxTurns ? 'prep.terminarTurno' : 'prep.terminarEsperar') + '</button>';
 }
@@ -287,6 +307,12 @@ function impactHTML() {
   let h = headerHTML();
   h += '<div class="banner" style="background:' + DIS[types[0]].color + '"><div class="label" style="color:rgba(255,255,255,.85)">' + u('impacto.titulo', {n: G.idx + 1}) + '</div><h2 style="font-size:24px">' + u('impacto.nombre', {lista: nombreDesastres(types)}) + '</h2><div style="font-size:13px;opacity:.9">' + u('impacto.previsto', {p: G.fc.pReal}) + '</div></div>';
   h += '<div class="mapwrap">' + mapHTML('impact') + '</div>';
+  if (!done) {
+    h += '<div class="row speed-bar"><span class="muted" style="font-size:12px">' + u('impacto.ritmo') + '</span><div class="speed-btns">'
+      + '<button class="spd' + (UI.velImpacto === 1 ? ' on' : '') + '" data-speed="1">' + u('impacto.vel1') + '</button>'
+      + '<button class="spd' + (UI.velImpacto === 2 ? ' on' : '') + '" data-speed="2">' + u('impacto.vel2') + '</button>'
+      + '<button class="spd skip" data-skip="1">' + u('impacto.saltar') + '</button></div></div>';
+  }
   h += '<div class="card"><div class="log">' + G.impact.events.slice(0, G.impact.shown).map(e => '<div class="e k-' + e.kind + '"><div class="dot"></div><div>' + e.text + '</div></div>').join('') + '</div></div>';
   return h + '<button class="btn" data-go="result"' + (done ? '' : ' disabled') + '>' + u(done ? 'impacto.ver' : 'impacto.espera') + '</button>';
 }

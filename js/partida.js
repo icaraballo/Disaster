@@ -3,7 +3,8 @@ import { TOWNS } from '../data/pueblos.js';
 import { ALCALDES } from '../data/alcaldes.js';
 import { PAIRS } from '../data/desastres.js';
 import { OFICIOS_INICIALES } from '../data/gente.js';
-import { TEMPORADA, SEMILLA_RETO, PREVISION, desanimados, COMBO_DESDE, COMBO_P, COMBO_P_ULTIMO } from '../data/balance.js';
+import { TEMPORADA, SEMILLA_RETO, PREVISION, desanimados, COMBO_DESDE, COMBO_P, COMBO_P_ULTIMO,
+  INGENIERA_PIEDRA_INI, AGRICULTOR_COMIDA_INI, TESORERO_DINERO_INI, TESORERO_MORAL_INI } from '../data/balance.js';
 import { RS, RI, rnd, pick, shuffle, wpick, mulberry32, hashStr, azarLibre, azarConSemilla } from './azar.js';
 import { G, setG, town, aytoDown, obsLevel, obsOk, intensity, newWorker, computeGeo, cleanAlloc, freeWorkers } from './estado.js';
 
@@ -22,22 +23,23 @@ export function newGame(opts) {
   else azarLibre();
   const townKey = daily ? pick(Object.keys(TOWNS)) : opts.town;
   const alc = daily ? pick(ALCALDES).id : opts.alc;
+  const moralIni = alc === 'tesorero' ? TESORERO_MORAL_INI : 70;
   setG({
     daily: daily || null, town: townKey, alc,
     phase:'forecast', idx:0, turn:1, maxTurns:3,
-    tiles: TOWNS[townKey].map.join('').split('').map(x => ({t:x, dmg:false, dique:false, cheap:false, sacos:false, rayo:false, muro:false, evac:false, ...(x === 'C' ? {propia:true, huespedes:[]} : {})})),
-    res:{pop:40, heridos:0, moral:70, dinero:60, madera:4, piedra:3, comida:12, riesgo:10},
+    tiles: TOWNS[townKey].map.join('').split('').map(x => ({t:x, dmg:false, dique:false, cheap:false, sacos:false, rayo:false, muro:false, evac:false, contra:false, reforzada:false, ...(x === 'C' ? {propia:true, huespedes:[]} : {})})),
+    res:{pop:40, heridos:0, moral:moralIni, dinero:60, madera:4, piedra:3, comida:12, riesgo:10},
     workers:[], nextId:1,
     alloc:{talar:[], cantera:[], granja:[], recaudar:[]}, busy:[], sel:null, msg:'', insp:null, heat:false,
     perks:{voluntarios:0, radar:0, bomba:false, bomberos:false, carpinteros:false, muros:false},
-    chosen:[], fc:null, impact:null, result:null, lost:null, event:null,
-    dry:false, dryFarm:false, cheapDique:false, lostTurn:0, paperwork:false, desanimados:[], lastAgri:false,
-    stats:{cause:{}, saves:{}, builds:{}, hist:[], startPop:40, startMoral:70}, lastEvent:null
+    chosen:[], fc:null, impact:null, result:null, lost:null, event:null, eventCtx:null,
+    dry:false, dryFarm:false, cheapDique:false, lostTurn:0, paperwork:false, desanimados:[], lastAgri:false, sondeoHecho:false,
+    stats:{cause:{}, saves:{}, builds:{}, hist:[], startPop:40, startMoral:moralIni}, lastEvent:null
   });
   computeGeo();
-  if (alc === 'ingeniera') G.res.piedra += 2;
-  if (alc === 'agricultor') G.res.comida += 20;
-  if (alc === 'tesorero') G.res.dinero += 40;
+  if (alc === 'ingeniera') G.res.piedra += INGENIERA_PIEDRA_INI;
+  if (alc === 'agricultor') G.res.comida += AGRICULTOR_COMIDA_INI;
+  if (alc === 'tesorero') G.res.dinero += TESORERO_DINERO_INI;
   OFICIOS_INICIALES.forEach(of => newWorker(of));
   // calendario de desastres (igual para todos en el reto diario)
   const pool = TOWNS[townKey].pool, pairs = PAIRS.filter(p => pool[p[0]] && pool[p[1]]);
@@ -81,7 +83,7 @@ export function newForecast() {
   const s = G.schedule[G.idx];
   G.maxTurns = Math.max(1, (aytoDown() ? 2 : 3) - G.lostTurn); G.lostTurn = 0;
   G.fc = {real:s.types, decoy:s.decoy, u:s.u, pReal:0, hist:[], I:s.I, lvl:obsLevel()};
-  G.turn = 1;
+  G.turn = 1; G.sondeoHecho = false;
   afinarPrevision(); G.busy = []; G.sel = null; G.msg = ''; G.lastAgri = false;
   // la moral baja quita brazos (con el azar de los impactos, para no tocar el del calendario)
   const nDes = desanimados(G.res.moral);

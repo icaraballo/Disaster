@@ -54,3 +54,36 @@ export const deslizamientoP = (riesgo, mult, I, pg = 1) => (riesgo/100) * mult *
 export const rayosTormenta = (I, pg = 1) => 3 + I + Math.round(3 * (pg - 1)); // edificios que alcanza una tormenta
 export const focosIncendio = (I, pg = 1) => I + Math.round(2 * (pg - 1));     // focos de un incendio
 export const deslizamientoCasillas = (I) => I >= 2 ? 2 : 1;
+
+// Alcaldes con identidad propia (pasiva + acción exclusiva + defecto direccional).
+export const INGENIERA_PIEDRA_INI = 2;
+export const INGENIERA_REPARAR_EXTRA = 1;       // reparar edificio dañado cuesta +1 madera (defecto)
+export const INGENIERA_RUINAS_EXTRA = 1;        // reparar ruinas cuesta +1 madera (defecto)
+export const CONTRAFUERTE_COSTE = {piedra: 2, madera: 1};
+
+export const ENFERMERA_MURO_EXTRA = 1;          // diques, escolleras y muros cuestan +1 piedra (defecto)
+export const ENFERMERA_RAYO_EXTRA = 5;          // pararrayos +5 dinero (defecto)
+export const ENFERMERA_REFUGIO_COSTE = {madera: 3, piedra: 1};
+export const EVAC_RAPIDA_DINERO = 8;            // evacuar sin gastar trabajador (además de la comida de entrada)
+
+export const AGRICULTOR_COMIDA_INI = 20;
+export const AGRICULTOR_GRANJA_BONUS = 3;
+export const AGRICULTOR_TALAR_MENOS = 1;        // talar da −1 madera por persona (defecto)
+export const GRANJA_REFORZADA_COSTE = {piedra: 1, dinero: 12};
+export const GRANJA_REFORZADA_COMIDA = 2;       // +2 comida por trabajador por cada granja reforzada sana
+export const GRANJA_REFORZADA_MORAL = 2;        // +2 moral tras cada desastre por cada granja reforzada sana
+export const GRANJA_REFORZADA_SEQUIA = 3;       // comida que salva cada granja reforzada en una sequía
+export const GRANJA_REFORZADA_PLAGA = 0.5;      // multiplicador de pérdidas de plaga por cada granja reforzada
+
+export const METEOROLOGA_OBRA_EXTRA = 1;        // diques, escolleras, muros y refugio cuestan +1 material (defecto)
+export const SONDEO_DINERO = 14;                // confirmar al 100 % el desastre real (sin observatorio)
+export const SONDEO_DINERO_OBS = 6;             // con observatorio sano cuesta menos de la mitad
+
+export const TESORERO_MORAL_INI = 62;           // arranca con moral más baja (defecto)
+export const TESORERO_DINERO_INI = 35;
+export const TESORERO_RECAUDAR_BONUS = 8;
+export const TESORERO_MORAL_RECAUDAR = 4;       // recaudar quita el doble de moral (defecto)
+export const TESORERO_MORAL_COMERCIANTE = 2;
+export const TESORERO_SACOS_DINERO = 5;
+export const TESORERO_RAYO_DINERO = 10;
+export const SUBCONTRATA_COSTE = {reparar: 18, ruinas: 32, solar: 46, terraplen: 22};

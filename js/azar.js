@@ -7,12 +7,15 @@ export let RS = Math.random;
 export let RI = Math.random;
 
 export function mulberry32(a) {
-  return function () {
-    a |= 0; a = a + 0x6D2B79F5 | 0;
+  a |= 0;
+  const fn = function () {
+    a = a + 0x6D2B79F5 | 0;
     let t = Math.imul(a ^ a >>> 15, 1 | a);
     t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
     return ((t ^ t >>> 14) >>> 0) / 4294967296;
   };
+  fn.estado = () => a | 0;
+  return fn;
 }
 export function hashStr(s) {
   let h = 1779033703;
@@ -20,11 +23,26 @@ export function hashStr(s) {
   return h >>> 0;
 }
 
-export function azarLibre() { RS = Math.random; RI = Math.random; }
+export function azarLibre() {
+  const s1 = (Math.random() * 0x100000000) >>> 0;
+  const s2 = (Math.random() * 0x100000000) >>> 0;
+  RS = mulberry32(s1);
+  RI = mulberry32(s2 ^ 0x9e3779b9);
+}
 export function azarConSemilla(texto) {
   const seed = hashStr(texto);
   RS = mulberry32(seed);
   RI = mulberry32(seed ^ 0x9e3779b9);
+}
+// Estado actual de los dos generadores, para guardar y restaurar una partida en curso sin repetir tiradas.
+export function estadoAzar() {
+  return RS && RI && RS.estado && RI.estado ? {rs: RS.estado(), ri: RI.estado()} : null;
+}
+export function restaurarAzar(est) {
+  if (est && typeof est.rs === 'number' && typeof est.ri === 'number') {
+    RS = mulberry32(est.rs);
+    RI = mulberry32(est.ri);
+  }
 }
 // Para tests y simulaciones: dos generadores cualesquiera (funciones que devuelven [0,1)).
 export function inyectarAzar(rs, ri) { RS = rs; RI = ri; }

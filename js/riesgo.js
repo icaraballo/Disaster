@@ -13,11 +13,16 @@ import { t } from './i18n.js';
 
 // Probabilidad (0-1) de que cada casilla sufra daños si llegan estos desastres con intensidad I.
 export function riskFor(types, I) {
-  const acc = new Array(N).fill(0);
-  const add = (i, p) => { if (BUILD.has(T(i).t)) acc[i] = 1 - (1 - acc[i]) * (1 - clamp(p, 0, 1)); };
+  const fuentes = Array.from({length: N}, () => []);
+  const sumarFuente = (sub) => { for (let i = 0; i < N; i++) if (sub[i] > 0) fuentes[i].push(sub[i]); };
+  const nuevaSub = () => {
+    const sub = new Array(N).fill(0);
+    const add = (i, p) => { if (BUILD.has(T(i).t)) sub[i] = 1 - (1 - sub[i]) * (1 - clamp(p, 0, 1)); };
+    return {sub, add};
+  };
   // Las mismas reglas que waterFlood (desastres.js): el terraplén frena y empuja río abajo, los sacos
   // protegen y tapan el agujero, y las ruinas (50 %) y el solar (100 %) dejan pasar el agua detrás.
-  const water = (src, p0, river) => {
+  const water = (src, p0, river, add) => {
     let carry = 0;
     for (const s of src) {
       if (T(s).dique) { if (river) carry += p0 * DIQUE_ARRASTRE; continue; }
@@ -41,19 +46,21 @@ export function riskFor(types, I) {
     }
   };
   types.forEach(k => {
-    if (k === 'riada') water(town().river, riadaP(I, town().riadaMult, G.perks.bomba, peligro()), true);
-    if (k === 'temporal') water(G.tiles.map((x, i) => x.t === 'M' ? i : -1).filter(i => i >= 0), temporalP(I, G.perks.bomba, peligro()), false);
+    const {sub, add} = nuevaSub();
+    if (k === 'riada') water(town().river, riadaP(I, town().riadaMult, G.perks.bomba, peligro()), true, add);
+    if (k === 'temporal') water(G.tiles.map((x, i) => x.t === 'M' ? i : -1).filter(i => i >= 0), temporalP(I, G.perks.bomba, peligro()), false, add);
     if (k === 'incendio') {
       const f = (G.dry || types.includes('sequia') || types.includes('ola') ? 1.3 : 1) * (healthy('bombero') ? 0.8 : 1) * (G.perks.bomberos ? 0.7 : 1);
       const focos = focosIncendio(I, peligro());
       G.tiles.forEach((x, b) => {
         if (!BUILD.has(x.t)) return;
-        G.tiles.forEach((u, j) => { if (u.t !== 'B') return; const d = cheb(b, j); if (d === 1) add(b, 0.18 * focos * f); else if (d === 2) add(b, 0.07 * focos * f); });
+        const multG = x.t === 'G' && x.reforzada ? 0.2 / 0.45 : 1;
+        G.tiles.forEach((u, j) => { if (u.t !== 'B') return; const d = cheb(b, j); if (d === 1) add(b, 0.18 * focos * f * multG); else if (d === 2) add(b, 0.07 * focos * f * multG); });
       });
     }
     if (k === 'tormenta') {
       const bs = G.tiles.map((x, i) => BUILD.has(x.t) ? i : -1).filter(i => i >= 0);
-      const p = Math.min(0.95, rayosTormenta(I, peligro()) / bs.length); // los mismos edificios que alcanza la tormenta (desastres.js)
+      const p = Math.min(0.95, rayosTormenta(I, peligro()) / bs.length);
       bs.forEach(i => { if (!G.tiles.some((x, j) => x.rayo && cheb(i, j) <= 1)) add(i, p); });
     }
     if (k === 'alud') {
@@ -69,14 +76,29 @@ export function riskFor(types, I) {
         }
       });
     }
+    sumarFuente(sub);
   });
   const slide = G.SLIDE.filter(i => BUILD.has(T(i).t)); // como en startImpact: ruinas y solares no cuentan
   if (slide.length) {
+    const {sub, add} = nuevaSub();
     const mult = Math.max(...types.map(k => SLIDE_MULT[k]));
     const ch = deslizamientoP(G.res.riesgo, mult, I, peligro()), kk = Math.min(slide.length, deslizamientoCasillas(I));
     slide.forEach(i => add(i, ch * kk / slide.length));
+    sumarFuente(sub);
   }
-  return acc;
+  // El contrafuerte absorbe el primer golpe: sólo se daña si recibe al menos 2 golpes en el mismo impacto.
+  return fuentes.map((fs, i) => {
+    if (!fs.length) return 0;
+    const p0 = fs.reduce((pr, p) => pr * (1 - p), 1);
+    if (!T(i).contra) return 1 - p0;
+    let p1 = 0;
+    for (let a = 0; a < fs.length; a++) {
+      let pr = fs[a];
+      for (let b = 0; b < fs.length; b++) if (b !== a) pr *= (1 - fs[b]);
+      p1 += pr;
+    }
+    return clamp(1 - p0 - p1, 0, 1);
+  });
 }
 
 // El riesgo «habitual» de cada casilla en el próximo desastre, sin previsión: la media de los
@@ -112,6 +134,7 @@ export function tileRisks(i) {
   }
   if (x.t === 'M') out.push(['warn', t('riesgos.M')]);
   if (BUILD.has(x.t)) {
+    if (x.contra) out.push(['good', t('riesgos.contrafuerte')]);
     if (nearRiver) out.push(['bad', t('riesgos.cercaRio')]);
     if (nearSea) out.push(['bad', t('riesgos.cercaMar')]);
     if (nearFire) out.push(['warn', t('riesgos.cercaFuego')]);
@@ -148,6 +171,8 @@ const tileNameCorto = (j) => T(j).t === 'C' ? nombreCasa(j) : (['A','G','O','W',
 export function tileState(i) {
   const x = T(i), s = [];
   if (x.dmg) s.push({text: t('estado.danado'), bad: true});
+  if (x.contra) s.push({text: t('estado.contrafuerte')});
+  if (x.reforzada) s.push({text: t('estado.granjaReforzada')});
   if (x.dique) s.push({text: x.t === 'M' ? t('estado.escollera') : t(x.cheap ? 'estado.diqueBarato' : 'estado.dique')});
   if (x.sacos) s.push({text: t('estado.sacos')});
   if (x.rayo) s.push({text: t('estado.pararrayos')});

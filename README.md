@@ -2,17 +2,16 @@
 
 ### ▶ [Jugar](https://icaraballo.github.io/Disaster/)
 
-> Nombre de trabajo. El nombre final está por decidir.
-
 Juego de gestión y supervivencia por turnos: eres el alcalde de un pueblo pequeño y tienes que
 conseguir que aguante una **temporada de 8 desastres** cada vez más fuertes. Entre desastre y
 desastre hay poco tiempo para prepararse y nunca sabes del todo qué va a venir.
 
 **Estado:** jugable en la web. El prototipo de la fase de diseño (noviembre de 2026) está portado a
 módulos, con textos aparte, lógica sin pantalla y tests de equilibrio con bots. Desde el 19-11 el
-pueblo se ve en un **mapa en 3D**, y desde el 21-11 (v4) la temporada es **más dura**: casas que caen
-en ruinas, familias acogidas, una previsión que se afina turno a turno y medallas. La v5 añade un
-**refugio** para evacuar familias (cada desastre allí cuesta más comida) y varias formas de ganar.
+pueblo se ve en un **mapa en 3D**, desde el 21-11 la temporada suma casas que caen en ruinas,
+familias acogidas, previsión que se afina turno a turno, medallas y **refugio**, y desde el 26-11
+(v6) **cada alcalde tiene su propia forma de ganar** (pasiva, acción exclusiva y punto débil), hay
+**autoguardado de partida en curso** y control de velocidad en los impactos (`×1 / ×2 / Saltar`).
 
 ## Cómo se juega
 
@@ -20,7 +19,8 @@ en ruinas, familias acogidas, una previsión que se afina turno a turno y medall
    afinan en cada turno: esperar da certeza, pero quita tiempo para preparar.
 2. **Preparación.** Tres turnos para repartir a tu gente entre **producir** (madera, piedra,
    comida, dinero) y **construir** sobre el mapa (diques, cortafuegos, pararrayos, muros…).
-3. **Impacto.** El desastre se resuelve paso a paso sobre el mapa.
+3. **Impacto.** El desastre se resuelve paso a paso sobre el mapa (puedes acelerarlo a `×2` o
+   saltarlo).
 4. **Consecuencias.** Eliges una mejora y, a veces, el pueblo te pone ante una decisión.
 
 Nada sale gratis: un dique protege un barrio pero empuja el agua al de abajo, y talar da madera
@@ -36,20 +36,21 @@ Aguantar los 8 desastres da el bronce; la plata y el oro piden acabar con el pue
   según la previsión, y al final hay un informe con gráficas de lo que pasó.
 - **Vecinos con nombre y oficio** que pueden resultar heridos o marcharse.
 - **Cuatro pueblos** (valle, costa, alta montaña y ría), cada uno más difícil que el anterior, y
-  **cinco alcaldes** con habilidades.
+  **cinco alcaldes asimétricos**, cada uno con su pasiva, su obra o acción exclusiva y su punto débil.
+- **Autoguardado de temporada** (incluyendo el estado del azar) para retomar la partida en cualquier momento.
 - **Reto diario** con los mismos desastres para todo el mundo.
 - **Equilibrado con simulación**: un simulador de bots juega miles de partidas para ajustar la
-  dificultad.
+  dificultad y comprobar que cada estrategia y alcalde funciona.
 
 ## Jugar y probar
 
 - **En la web:** https://icaraballo.github.io/Disaster/
 - **En local:** `npm run serve` y abre http://127.0.0.1:8765/ (los módulos de JavaScript no
   funcionan abriendo `index.html` con doble clic).
-- **Tests:** `npm test` (textos, lógica, pantallas y equilibrio con bots). No hace falta
+- **Tests:** `npm test` (textos, lógica, pantallas, guardado y equilibrio con bots). No hace falta
   `npm install`: el juego no tiene dependencias.
-- **Estrategias:** `npm run estrategias` enfrenta al bot listo con tres estrategias puras (muros,
-  cuidar a la gente y sacrificar casas) en cada pueblo.
+- **Estrategias:** `npm run estrategias` enfrenta al bot listo con tres estrategias puras y mide la
+  tabla Alcalde × Pueblo (jugando a su manera frente a jugar genérico).
 - **Simulador de bots:** `npm run simular` cuenta cuántas partidas gana cada bot (ingenuo, medio y
   listo) en cada pueblo, con los vecinos finales, la moral mínima y las medallas.
 - El prototipo original de un solo archivo sigue en `reference/disaster-prototipo-v1.html`

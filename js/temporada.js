@@ -8,6 +8,7 @@ import { G, townName, aliveWorkers } from './estado.js';
 import { newForecast } from './partida.js';
 import { PERKS, EVENTS } from './mejoras.js';
 import { PROG, saveProg, cumple } from './progreso.js';
+import { borrarPartidaGuardada } from './guardado.js';
 import { submitDaily } from './ranking.js';
 import { t } from './i18n.js';
 
@@ -30,14 +31,15 @@ export function choosePerk(id) {
   const cands = EVENTS.filter(e => e.id !== G.lastEvent && e.cond());
   if (RS() < 0.7 && cands.length) {
     const e = pick(cands); G.lastEvent = e.id;
-    G.event = e.mk(); G.phase = 'event'; return;
+    const ctx = {id: e.id}; G.eventCtx = ctx;
+    G.event = e.mk(ctx); G.phase = 'event'; return;
   }
   newForecast(); G.phase = 'forecast';
 }
 
 export function chooseEvent(k) {
   const o = G.event.opts.filter(x => !x.ok || x.ok())[k]; o.a();
-  G.event = null; newForecast(); G.phase = 'forecast';
+  G.event = null; G.eventCtx = null; newForecast(); G.phase = 'forecast';
 }
 
 export function score() {
@@ -55,6 +57,7 @@ export function medalla() {
 // Cierra la temporada: puntúa, apunta el progreso y mira qué se ha desbloqueado.
 export function finish() {
   G.phase = 'end'; G.final = score();
+  borrarPartidaGuardada();
   const before = JSON.parse(JSON.stringify(PROG));
   const reached = G.lost ? G.idx : TEMPORADA - 1;
   PROG.total += G.lost ? G.idx : TEMPORADA;

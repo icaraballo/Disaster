@@ -4,7 +4,7 @@
 // Uso: npm test   (o node --test tests/equilibrio.test.mjs)
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { cargarTextosDeDisco, ingenuo, medio, listo, simular } from './bots.mjs';
+import { cargarTextosDeDisco, ingenuo, medio, listo, generico, simular } from './bots.mjs';
 
 cargarTextosDeDisco();
 const N = 300;
@@ -51,7 +51,6 @@ test('pensar siempre sale a cuenta: el listo gana mucho más que el medio, y el 
 });
 
 test('medallas: ganar bien cuesta (plata o más en ~45-60 % de las victorias del listo, oro en ~20-35 %)', () => {
-  // De media en los cuatro pueblos; cada pueblo se aparta algo porque los vecinos van a saltos.
   const towns = Object.keys(OBJETIVO);
   const plata = towns.reduce((s, k) => s + medir('listo', listo, k).plata, 0) / towns.length;
   const oro = towns.reduce((s, k) => s + medir('listo', listo, k).oro, 0) / towns.length;
@@ -59,10 +58,17 @@ test('medallas: ganar bien cuesta (plata o más en ~45-60 % de las victorias del
   assert.ok(oro >= 20 - MARGEN && oro <= 35 + MARGEN, `oro: ${oro.toFixed(0)} %`);
 });
 
-test('ningún alcalde está roto: ninguno se acerca a ganar sin pensar ni a perder pensando', () => {
-  for (const alc of ['ingeniera', 'agricultor', 'meteorologa', 'tesorero', 'enfermera']) {
+test('ningún alcalde está roto y ninguno es el mejor en todos los pueblos', () => {
+  const alcs = ['ingeniera', 'agricultor', 'meteorologa', 'tesorero', 'enfermera'];
+  const towns = Object.keys(OBJETIVO);
+  for (const alc of alcs) {
     const a = medir('ingenuo', ingenuo, 'villarrio', alc).pct, b = medir('listo', listo, 'villarrio', alc).pct;
     assert.ok(a <= 15, `${alc} ingenuo en Villarrío: ${a.toFixed(0)} % (demasiado fácil)`);
     assert.ok(b >= 65, `${alc} listo en Villarrío: ${b.toFixed(0)} % (demasiado difícil)`);
+    const mediaPropio = towns.reduce((s, t) => s + medir('listo', listo, t, alc).pct, 0) / towns.length;
+    const mediaGen = towns.reduce((s, t) => s + medir('generico', generico, t, alc).pct, 0) / towns.length;
+    assert.ok(mediaPropio >= mediaGen - 1, `${alc}: su estilo (${mediaPropio.toFixed(1)} %) debería rendir al menos como lo genérico (${mediaGen.toFixed(1)} %)`);
   }
+  const ganadores = new Set(towns.map(t => [...alcs].sort((x, y) => medir('listo', listo, t, y).pct - medir('listo', listo, t, x).pct)[0]));
+  assert.ok(ganadores.size >= 2, 'un solo alcalde es el mejor en los cuatro pueblos');
 });

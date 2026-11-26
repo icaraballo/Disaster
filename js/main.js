@@ -2,6 +2,7 @@
 import { todayKey } from './util.js';
 import { cargarTextosWeb, t } from './i18n.js';
 import { cargarProgreso, PROG, saveProg, unlockedTown } from './progreso.js';
+import { guardarPartida, continuarPartida, verificarGuardadoInicial, limpiarFalloGuardado } from './guardado.js';
 import { ganchos, initCaps } from './ranking.js';
 import { G, setG, T, W, ofName } from './estado.js';
 import { OFICIOS } from '../data/gente.js';
@@ -18,13 +19,15 @@ let mapa3d = null;   // el módulo del mapa en 3D, si el navegador lo permite (s
 
 // Si la partida acaba de llegar al impacto, va enseñando los sucesos de uno en uno.
 function vigilarImpacto() {
-  if (!G || G.phase !== 'impact' || timer) return;
+  if (!G || G.phase !== 'impact' || timer || G.impact.shown >= G.impact.events.length) return;
+  const base = mapa3d ? TIEMPOS.ritmoImpacto : 700;
+  const ms = UI.velImpacto === 2 ? Math.round(base / 2) : base;
   timer = setInterval(() => {
     if (!G || G.phase !== 'impact') { clearInterval(timer); timer = null; return; }
     G.impact.shown++;
-    if (G.impact.shown >= G.impact.events.length) { clearInterval(timer); timer = null; }
+    if (G.impact.shown >= G.impact.events.length) { clearInterval(timer); timer = null; guardarPartida(); }
     render(); if (mapa3d) mapa3d.alDibujar();
-  }, mapa3d ? TIEMPOS.ritmoImpacto : 700);
+  }, ms);
 }
 function dibujar() { render(); if (mapa3d) mapa3d.alDibujar(); animarNumeros(); vigilarImpacto(); }
 
@@ -42,8 +45,8 @@ async function activar3d() {
 
 // Construye la acción elegida en la casilla i y, en el 3D, manda a la gente a esa casilla.
 function construir(i) {
-  const ids = G.sel && ACTIONS[G.sel] ? planObra(G.sel).equipo.map(w => w.id) : [];
-  if (doAction(i) && mapa3d) mapa3d.enviarA(ids, i);
+  const ids = G.sel && ACTIONS[G.sel] ? planObra(G.sel, i).equipo.map(w => w.id) : [];
+  if (doAction(i)) { if (mapa3d) mapa3d.enviarA(ids, i); guardarPartida(); }
 }
 
 // Tocar una casilla (del mapa plano o del 3D): construir si hay una acción elegida, o abrir la ficha.
@@ -59,14 +62,15 @@ function tocarCasilla(i) {
 function irA(g) {
   UI.persona = null;
   const top = () => window.scrollTo(0, 0);
+  if (g === 'continue') { if (continuarPartida()) { UI.screen = 'game'; top(); } return dibujar(); }
   if (g === 'setup') { UI.screen = 'setup'; if (!unlockedTown(UI.town)) UI.town = 'villarrio'; top(); return dibujar(); }
-  if (g === 'menu') { UI.screen = 'menu'; setG(null); clearInterval(timer); timer = null; top(); return dibujar(); }
+  if (g === 'menu') { guardarPartida(); UI.screen = 'menu'; setG(null); clearInterval(timer); timer = null; top(); return dibujar(); }
   if (g === 'howto') { UI.howto = !UI.howto; return dibujar(); }
-  if (g === 'start') { newGame({town: UI.town, alc: UI.alc}); UI.screen = 'game'; top(); return dibujar(); }
-  if (g === 'daily') { newGame({daily: todayKey()}); UI.screen = 'game'; top(); return dibujar(); }
-  if (g === 'prep') { G.phase = 'prep'; G.msg = ''; top(); return dibujar(); }
-  if (g === 'endturn') { endTurn(); return dibujar(); }
-  if (g === 'result') { top(); toResult(); return dibujar(); }
+  if (g === 'start') { limpiarFalloGuardado(); newGame({town: UI.town, alc: UI.alc}); UI.screen = 'game'; guardarPartida(); top(); return dibujar(); }
+  if (g === 'daily') { limpiarFalloGuardado(); newGame({daily: todayKey()}); UI.screen = 'game'; guardarPartida(); top(); return dibujar(); }
+  if (g === 'prep') { G.phase = 'prep'; G.msg = ''; guardarPartida(); top(); return dibujar(); }
+  if (g === 'endturn') { endTurn(); guardarPartida(); return dibujar(); }
+  if (g === 'result') { top(); toResult(); guardarPartida(); return dibujar(); }
   if (g === 'finish') { top(); finish(); return dibujar(); }
 }
 
@@ -75,17 +79,19 @@ function clic(e) {
   const top = () => window.scrollTo(0, 0);
   const d = b.dataset;
   if (d.go) return irA(d.go);
+  if (d.speed) { UI.velImpacto = +d.speed; clearInterval(timer); timer = null; return dibujar(); }
+  if (d.skip) { if (G && G.impact) { G.impact.shown = G.impact.events.length; clearInterval(timer); timer = null; guardarPartida(); } return dibujar(); }
   if (d.town) { UI.town = d.town; return dibujar(); }
   if (d.alc) { UI.alc = d.alc; return dibujar(); }
   if (d.heat) { G.heat = !G.heat; return dibujar(); }
-  if (d.job) { changeJob(d.job, +d.d); return dibujar(); }
+  if (d.job) { changeJob(d.job, +d.d); guardarPartida(); return dibujar(); }
   if (d.act) { G.sel = G.sel === d.act ? null : d.act; G.msg = ''; return dibujar(); }
   if (d.person) { if (UI.persona === d.person) { UI.persona = null; G.insp = null; } else { UI.persona = d.person; G.insp = W(d.person).home; } return dibujar(); }
   if (d.tile) return tocarCasilla(+d.tile);
   if (d.close) { UI.persona = null; G.insp = null; return dibujar(); }
   if (d.doat) { G.sel = d.doat; construir(G.insp); G.sel = null; return dibujar(); }
-  if (d.perk) { top(); choosePerk(d.perk); return dibujar(); }
-  if (d.ev) { top(); chooseEvent(+d.ev); return dibujar(); }
+  if (d.perk) { top(); choosePerk(d.perk); guardarPartida(); return dibujar(); }
+  if (d.ev) { top(); chooseEvent(+d.ev); guardarPartida(); return dibujar(); }
 }
 
 async function arrancar() {
@@ -93,6 +99,7 @@ async function arrancar() {
   try { await cargarTextosWeb(); }
   catch (e) { app.textContent = 'No se han podido cargar los textos del juego. Recarga la página.'; return; }
   cargarProgreso();
+  verificarGuardadoInicial();
   ganchos.alCambiar = dibujar;
   app.addEventListener('change', (e) => {
     if (e.target.dataset && e.target.dataset.test) { PROG.test = e.target.checked; saveProg(); dibujar(); }

@@ -1,6 +1,8 @@
 // Producción y paso de turnos de la preparación. Sin pantalla.
 import { clamp } from './util.js';
-import { G, W, granjasOk, freeWorkers, cleanAlloc } from './estado.js';
+import { AGRICULTOR_GRANJA_BONUS, AGRICULTOR_TALAR_MENOS, GRANJA_REFORZADA_COMIDA,
+  TESORERO_RECAUDAR_BONUS, TESORERO_MORAL_RECAUDAR, TESORERO_MORAL_COMERCIANTE } from '../data/balance.js';
+import { G, W, granjasOk, granjasReforzadasOk, freeWorkers, cleanAlloc } from './estado.js';
 import { rankJob } from './acciones.js';
 import { startImpact } from './desastres.js';
 import { afinarPrevision } from './partida.js';
@@ -9,11 +11,21 @@ import { t } from './i18n.js';
 // Lo que producirá este turno el reparto actual.
 export function production() {
   const r = {madera:0, piedra:0, comida:0, dinero:0, moral:0, riesgo:0};
-  G.alloc.talar.forEach(id => { const w = W(id); r.madera += 2 + (w.of==='lenador'?2:0) + (G.perks.carpinteros?1:0); r.riesgo += 4; });
+  const baseTalar = 2 - (G.alc === 'agricultor' ? AGRICULTOR_TALAR_MENOS : 0);
+  G.alloc.talar.forEach(id => { const w = W(id); r.madera += baseTalar + (w.of==='lenador'?2:0) + (G.perks.carpinteros?1:0); r.riesgo += 4; });
   G.alloc.cantera.forEach(id => { const w = W(id); r.piedra += 1 + (w.of==='cantero'?1:0); r.riesgo += w.of==='cantero'?3:6; });
-  const g = granjasOk(), base = g >= 2 ? 2 : g;
-  G.alloc.granja.forEach(id => { const w = W(id); let v = base > 0 ? base + (w.of==='agricultor'?2:0) + (G.alc==='agricultor'?3:0) : 0; if (G.dryFarm) v = Math.floor(v/2); r.comida += v; });
-  G.alloc.recaudar.forEach(id => { const w = W(id); r.dinero += 15 + (w.of==='comerciante'?10:0) + (G.alc==='tesorero'?5:0); r.moral -= (G.alc==='tesorero' || w.of==='comerciante') ? 1 : 2; });
+  const g = granjasOk(), base = g >= 2 ? 2 : g, ref = granjasReforzadasOk();
+  G.alloc.granja.forEach(id => {
+    const w = W(id);
+    let v = base > 0 ? base + (w.of==='agricultor'?2:0) + (G.alc==='agricultor'?AGRICULTOR_GRANJA_BONUS:0) + ref * GRANJA_REFORZADA_COMIDA : 0;
+    if (G.dryFarm && !ref) v = Math.floor(v / 2);
+    r.comida += v;
+  });
+  G.alloc.recaudar.forEach(id => {
+    const w = W(id);
+    r.dinero += 15 + (w.of==='comerciante'?10:0) + (G.alc==='tesorero'?TESORERO_RECAUDAR_BONUS:0);
+    r.moral -= G.alc === 'tesorero' ? (w.of==='comerciante' ? TESORERO_MORAL_COMERCIANTE : TESORERO_MORAL_RECAUDAR) : (w.of==='comerciante' ? 1 : 2);
+  });
   return r;
 }
 

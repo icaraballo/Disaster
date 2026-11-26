@@ -148,6 +148,11 @@ export function crearModelos(THREE) {
         const cultivo = matUnico(0x6FA14A); T.tintes.push({ m: cultivo, base: cultivo.color.clone(), peso: 1, cultivo: true });
         add(malla(caja(0.62, 0.05, 0.07), cultivo, 0.0, h + 0.03, 0.2 + k * 0.1 - 0.0, { sombra: false })).position.z = 0.17 + k * 0.1;
       }
+      if (e.reforzada) {   // granja reforzada: un silo metálico junto al granero y valla de protección
+        add(malla(cil(0.11, 0.11, 0.34, 8), mat(0xC8B894), 0.24, h + 0.17, -0.14));
+        add(malla(cono(0.12, 0.1, 8), mat(0x7C8FA6), 0.24, h + 0.39, -0.14));
+        add(malla(caja(0.7, 0.06, 0.03), mat(0x6B5B45), 0, h + 0.06, 0.44, { sombra: false }));
+      }
     } else if (t === 'O') {
       add(malla(caja(0.5, 0.26, 0.5), dano ? matUnico(0x9B8466) : matUnico(0xF1E6CE), 0, h + 0.13, 0));
       const cupula = malla(esfera(0.26, 10, 5), matUnico(dano ? 0x55606C : 0x7C8FA6), 0, h + 0.26, 0, { sy: 0.9 }); cupula.geometry = geo('semiesfera', () => new THREE.SphereGeometry(0.26, 10, 5, 0, Math.PI * 2, 0, Math.PI / 2)); if (dano) cupula.rotation.z = 0.2;
@@ -171,6 +176,11 @@ export function crearModelos(THREE) {
       }
     }
     if (e.muro) add(malla(caja(0.9, 0.26, 0.13), mat(0x8E8A84), 0, h + 0.13, 0.22));
+    if (e.contra) {   // contrafuertes de piedra adosados a las esquinas del edificio
+      [[-0.31, -0.27, 0.22], [0.31, -0.27, -0.22], [-0.31, 0.27, 0.22], [0.31, 0.27, -0.22]].forEach(([x, z, rz]) => {
+        add(malla(caja(0.1, 0.24, 0.1), mat(0x5E6E7E), x, h + 0.11, z, { rz }));
+      });
+    }
     if (e.sacos) for (let k = 0; k < 4; k++) add(malla(esfera(0.07, 6, 4), mat(0xB99662), -0.3 + k * 0.2, h + 0.04 + (k % 2) * 0.06, 0.36 - (k % 2) * 0.05, { sy: 0.7, sz: 1.2 }));
     if (e.rayo) {
       add(malla(cil(0.012, 0.012, 0.6, 5), mat(0x555B63), 0.38, h + 0.3, -0.38));

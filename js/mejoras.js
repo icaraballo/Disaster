@@ -2,8 +2,8 @@
 // así que viven en código; sus nombres y textos están en i18n/es.json («mejoras» y «eventos»).
 import { clamp, ao } from './util.js';
 import { pick } from './azar.js';
-import { G, T, newWorker, ofName, obsLevel, aliveWorkers } from './estado.js';
-import { RUINAS, repararRuinas, elegirAcogida, nombreCasa, familias, refugioOk, plazasLibres, evacuarCasa, volverACasa, idxRefugio } from './casas.js';
+import { G, T, W, newWorker, ofName, obsLevel, aliveWorkers } from './estado.js';
+import { RUINAS, repararRuinas, elegirAcogida, nombreCasa, familias, refugioOk, plazasLibres, costeEntradaRefugio, evacuarCasa, volverACasa, idxRefugio } from './casas.js';
 import { VECINOS_FAMILIA_SE_VA, MORAL_REFUGIO_LLENO } from '../data/balance.js';
 import { riesgoHabitual } from './riesgo.js';
 import { aytoIdx } from './estado.js';
@@ -53,13 +53,13 @@ export const EVENTS = [
         {...op('refugiados','no'), a:()=>{G.res.moral=clamp(G.res.moral-8,0,100);}}]}; }},
   // el refugio está lleno y una familia en peligro pide entrar: ¿a quién mandas a casa?
   {id:'refugioLleno', cond:()=>refugioLlenoPeticion() != null, mk:()=>{
-    const p = refugioLlenoPeticion(), r = riesgoHabitual();
+    const p = refugioLlenoPeticion(), r = riesgoHabitual(), coste = costeEntradaRefugio(T(p));
     const pct = (i) => Math.round(r[i] * 100);
     const dentro = G.tiles.map((x, i) => x.evac ? i : -1).filter(i => i >= 0).sort((a, b) => r[a] - r[b]).slice(0, 3);
     return {...cabecera('refugioLleno', {casa: nombreCasa(p), riesgo: pct(p)}),
-      opts: dentro.map(i => ({...op('refugioLleno', 'sacar', {casa: nombreCasa(i), riesgo: pct(i)}),
-          ok:()=>G.res.comida >= familias(T(p)) && familias(T(i)) + plazasLibres() >= familias(T(p)),
-          a:()=>{ volverACasa(i); G.res.comida -= familias(T(p)); evacuarCasa(p); }}))
+      opts: dentro.map(i => ({...op('refugioLleno', 'sacar', {casa: nombreCasa(i), riesgo: pct(i), comida: coste}),
+          ok:()=>G.res.comida >= coste && familias(T(i)) + plazasLibres() >= familias(T(p)),
+          a:()=>{ volverACasa(i); G.res.comida -= coste; evacuarCasa(p); }}))
         .concat([{...op('refugioLleno', 'no', {n: MORAL_REFUGIO_LLENO}), a:()=>{ G.res.moral = clamp(G.res.moral - MORAL_REFUGIO_LLENO, 0, 100); }}])}; }},
   {id:'mercado', cond:()=>true, mk:()=>({...cabecera('mercado'),
     opts:[{...op('mercado','piedra'), ok:()=>G.res.dinero>=25, a:()=>{G.res.dinero-=25; G.res.piedra+=4;}},
@@ -71,12 +71,16 @@ export const EVENTS = [
           {...op('bosqueviejo','proteger'), a:()=>{G.res.moral=clamp(G.res.moral+5,0,100);}}]})},
   {id:'periodista', cond:()=>G.lastDmg>0, mk:()=>({...cabecera('periodista'),
     opts:[{...op('periodista','entrevista'), a:()=>{G.res.dinero+=35;}},{...op('periodista','no'), a:()=>{G.res.moral=clamp(G.res.moral+4,0,100);}}]})},
-  {id:'hospital', cond:()=>G.workers.some(w=>w.inj && !w.gone), mk:()=>{
-    const w = pick(G.workers.filter(x=>x.inj && !x.gone)); const v = {nombre: w.name, oficio: ofName(w), a: ao(w)};
+  {id:'hospital', cond:()=>G.workers.some(w=>w.inj && !w.gone), mk:(ctx = {})=>{
+    const w = (ctx.wid && W(ctx.wid)) || pick(G.workers.filter(x=>x.inj && !x.gone));
+    ctx.wid = w.id;
+    const v = {nombre: w.name, oficio: ofName(w), a: ao(w)};
     return {...cabecera('hospital', v),
       opts:[{...op('hospital','llevar', v), ok:()=>G.res.dinero>=20, a:()=>{G.res.dinero-=20; w.inj=0;}},{...op('hospital','quedar', v), a:()=>{}}]}; }},
-  {id:'miedo', cond:()=>aliveWorkers().length>=5 && aliveWorkers().some(x=>!x.inj), mk:()=>{
-    const w = pick(aliveWorkers().filter(x=>!x.inj)); const v = {nombre: w.name, oficio: ofName(w), a: ao(w)};
+  {id:'miedo', cond:()=>aliveWorkers().length>=5 && aliveWorkers().some(x=>!x.inj), mk:(ctx = {})=>{
+    const w = (ctx.wid && W(ctx.wid)) || pick(aliveWorkers().filter(x=>!x.inj));
+    ctx.wid = w.id;
+    const v = {nombre: w.name, oficio: ofName(w), a: ao(w)};
     return {...cabecera('miedo', v),
       opts:[{...op('miedo','convencer', v), ok:()=>G.res.dinero>=15, a:()=>{G.res.dinero-=15;}},{...op('miedo','irse', v), a:()=>{w.gone=true; G.res.comida+=3; G.res.pop-=1;}}]}; }},
   {id:'montaneros', cond:()=>G.res.comida>=3, mk:()=>({...cabecera('montaneros'),

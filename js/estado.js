@@ -20,6 +20,7 @@ export const obsOk = () => G.tiles.some(x => x.t === 'O' && !x.dmg);
 export const hasType = (k) => G.tiles.some(x => x.t === k);
 export const aljibeOk = () => G.tiles.some(x => x.t === 'W' && !x.dmg);
 export const granjasOk = () => G.tiles.filter(x => x.t === 'G' && !x.dmg).length;
+export const granjasReforzadasOk = () => G.tiles.filter(x => x.t === 'G' && !x.dmg && x.reforzada).length;
 export const obsLevel = () => Math.min(3, 1 + G.perks.radar + (obsOk() ? 1 : 0) + (G.alc === 'meteorologa' ? 1 : 0));
 export const intensity = (idx) => INTENSIDAD(idx);
 export const healthy = (of) => G.workers.some(w => w.of === of && !w.gone && !w.inj);

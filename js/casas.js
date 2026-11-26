@@ -81,7 +81,7 @@ export function aRuinas(i, ev) {
   if (x.evac) volverACasa(i);
   ev.push({text: t('log.aRuinas', {lugar: cap(nm)}), kind: 'bad', tiles: [[i, 'ruinas']]});
   huespedes.forEach(o => ev.push(seVaAcogida(i, o)));
-  x.t = RUINAS; x.dmg = false; x.propia = false; x.huespedes = []; x.acogidaEn = null;
+  x.t = RUINAS; x.dmg = false; x.contra = false; x.propia = false; x.huespedes = []; x.acogidaEn = null;
   if (!habia && !huespedes.length) return;
   G.res.moral = clamp(G.res.moral - MORAL_RUINAS, 0, 100);
   if (!habia) return;
@@ -117,7 +117,7 @@ function vuelveFamilia(i, dest) {
 // Reparar las ruinas i: vuelve a ser una casa y su familia (si sigue en el pueblo) vuelve.
 export function repararRuinas(i) {
   const x = T(i), dest = x.acogidaEn;
-  x.t = 'C'; x.dmg = false; x.huespedes = []; x.propia = false; x.acogidaEn = null;
+  x.t = 'C'; x.dmg = false; x.contra = false; x.huespedes = []; x.propia = false; x.acogidaEn = null;
   vuelveFamilia(i, dest);
 }
 
@@ -129,7 +129,7 @@ export function reconstruir(i) {
 // Terraplén en las ruinas o el solar i: la casa desaparece para siempre; su familia se queda acogida.
 export function terraplen(i) {
   const x = T(i);
-  x.t = TERRAPLEN; x.acogidaEn = null; x.sacos = false;
+  x.t = TERRAPLEN; x.acogidaEn = null; x.sacos = false; x.contra = false;
 }
 
 // ---------- el refugio ----------
@@ -138,6 +138,8 @@ export const refugioOk = () => { const i = idxRefugio(); return i >= 0 && !G.til
 export const plazasUsadas = () => G.tiles.reduce((s, x) => s + (x.evac ? familias(x) : 0), 0);
 export const plazasRefugio = () => REFUGIO_PLAZAS + (G.alc === 'enfermera' ? 1 : 0);   // la enfermera: una plaza más
 export const plazasLibres = () => refugioOk() ? plazasRefugio() - plazasUsadas() : 0;
+// DB-01: comida que cuesta meter a las familias de la casa x en el refugio (1 por familia; mitad con agricultor).
+export const costeEntradaRefugio = (x) => { const c = Math.max(1, x ? familias(x) : 1); return G.alc === 'agricultor' ? Math.ceil(c / 2) : c; };
 // Lo que costará en comida el próximo desastre de la casa evacuada i (1, 2, 3… por familia).
 // (con el agricultor, la mitad: comen de los huertos del pueblo)
 const tarifa = (x) => { const c = (x.evacN + 1) * familias(x); return G.alc === 'agricultor' ? Math.ceil(c / 2) : c; };

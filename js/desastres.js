@@ -2,12 +2,14 @@
 // ({text, kind, tiles}) a una lista que la vista va enseñando poco a poco.
 import { BUILD } from '../data/casillas.js';
 import { SLIDE_MULT } from '../data/desastres.js';
-import { DIQUE_ARRASTRE, DIQUE_BARATO_CEDE, TERRAPLEN_ARRASTRE, PASA_AGUA, VECINOS_CASA_DANADA, MORAL_DANO_CASA, MORAL_DANO_EDIFICIO, desanimados, riadaP, temporalP, aludP, deslizamientoP, deslizamientoCasillas, rayosTormenta, focosIncendio } from '../data/balance.js';
+import { DIQUE_ARRASTRE, DIQUE_BARATO_CEDE, TERRAPLEN_ARRASTRE, PASA_AGUA, VECINOS_CASA_DANADA, MORAL_DANO_CASA, MORAL_DANO_EDIFICIO,
+  GRANJA_REFORZADA_MORAL, GRANJA_REFORZADA_SEQUIA, GRANJA_REFORZADA_PLAGA,
+  desanimados, riadaP, temporalP, aludP, deslizamientoP, deslizamientoCasillas, rayosTormenta, focosIncendio } from '../data/balance.js';
 import { RI, shuffle, pick } from './azar.js';
 import { cap, clamp, nb4, cheb, ao, pl } from './util.js';
 import { COLS, N } from '../data/casillas.js';
 import { RUINAS, SOLAR, TERRAPLEN, REFUGIO, familias, aRuinas, finDeImpacto, fotoInicio, nombreCasa, cobrarRefugio, vaciarRefugio } from './casas.js';
-import { G, T, town, peligro, aytoIdx, aytoDown, aljibeOk, healthy, ofName } from './estado.js';
+import { G, T, town, peligro, aytoIdx, aytoDown, aljibeOk, granjasReforzadasOk, healthy, ofName } from './estado.js';
 import { t } from './i18n.js';
 
 function tileName(i) {
@@ -24,6 +26,7 @@ const save = (k, n) => { G.stats.saves[k] = (G.stats.saves[k] || 0) + (n || 1); 
 export function damage(i, cause, ctx) {
   const x = T(i), r = G.res, nm = tileName(i), out = [];
   if ((cause === 'agua' || cause === 'mar') && x.sacos) { x.sacos = false; save('sacos'); return [{text:t('log.sacos', {lugar: nm}), kind:'good', tiles:[[i,'ok']]}]; }
+  if (x.contra) { x.contra = false; save('contrafuerte'); return [{text:t('log.contrafuerte', {lugar: nm}), kind:'good', tiles:[[i,'ok']]}]; }
   const already = x.dmg; x.dmg = true; ctx.dmg++; G.stats.cause[cause] = (G.stats.cause[cause] || 0) + 1;
   if (x.t === 'C') {
     const fam = familias(x);
@@ -135,7 +138,8 @@ export const RESOLVE = {
         if (burned.has(n)) continue;
         const tt = T(n).t;
         if (tt === 'X') { blocked.add(n); continue; }
-        const pr = (PR[tt] || 0) + ((PR[tt] || 0) > 0 ? mod : 0);
+        const basePr = (tt === 'G' && T(n).reforzada) ? 0.2 : (PR[tt] || 0);
+        const pr = basePr + (basePr > 0 ? mod : 0);
         if (RI() < pr) { burned.add(n); q.push(n); }
       }
     }
@@ -186,14 +190,15 @@ export const RESOLVE = {
   },
   sequia(I, ev, ctx) {
     ev.push({text:t('log.sequia'), kind:'title'});
-    let need = 3 * I; const al = aljibeOk();
+    let need = 3 * I; const al = aljibeOk(), ref = granjasReforzadasOk();
     if (al) { need = Math.ceil(need / 2); save('aljibe'); ev.push({text:t('log.aljibe'), kind:'good', tiles:[[G.tiles.findIndex(x => x.t === 'W'),'ok']]}); }
+    if (ref) { need = Math.max(0, need - ref * GRANJA_REFORZADA_SEQUIA); save('granjaReforzada', ref); ev.push({text:t('log.granjaReforzadaSequia'), kind:'good', tiles:G.tiles.map((x, i) => x.t === 'G' && !x.dmg && x.reforzada ? [i,'ok'] : null).filter(Boolean)}); }
     const lost = Math.min(need, G.res.comida); G.res.comida -= lost;
     ev.push({text:t('log.comidaPerdida', {n: lost}), kind:'warn'});
     if (lost < need) { G.res.moral = clamp(G.res.moral - 8, 0, 100); G.stats.cause.hambre = (G.stats.cause.hambre || 0) + 1; ev.push({text:t('log.sinReservas'), kind:'bad'}); }
     G.res.moral = clamp(G.res.moral - 3, 0, 100);
     ctx.dry = true; G.dry = true;
-    if (!al) { G.dryFarm = true; ev.push({text:t('log.camposSecos'), kind:'cascade'}); }
+    if (!al && !ref) { G.dryFarm = true; ev.push({text:t('log.camposSecos'), kind:'cascade'}); }
     ev.push({text:t('log.tierraSeca'), kind:'cascade'});
   },
   ola(I, ev, ctx) {
@@ -214,8 +219,9 @@ export const RESOLVE = {
   },
   plaga(I, ev, ctx) {
     ev.push({text:t('log.plaga'), kind:'title', tiles:G.tiles.map((x, i) => x.t === 'G' ? [i,'bolt'] : null).filter(Boolean)});
-    let frac = 0.2 + 0.1 * I; const half = G.lastAgri || G.alc === 'agricultor';
+    let frac = 0.2 + 0.1 * I; const half = G.lastAgri || G.alc === 'agricultor', ref = granjasReforzadasOk();
     if (half) { frac /= 2; ev.push({text:t(G.lastAgri ? 'log.plagaAgricultor' : 'log.plagaAlcalde'), kind:'good'}); }
+    if (ref) { frac *= Math.pow(GRANJA_REFORZADA_PLAGA, ref); save('granjaReforzada', ref); ev.push({text:t('log.granjaReforzadaPlaga'), kind:'good', tiles:G.tiles.map((x, i) => x.t === 'G' && !x.dmg && x.reforzada ? [i,'ok'] : null).filter(Boolean)}); }
     const lost = Math.round(G.res.comida * frac);
     G.res.comida -= lost; G.res.moral = clamp(G.res.moral - 3, 0, 100);
     ev.push({text:t('log.plagaPierde', {n: lost}), kind:lost > 0 ? 'warn' : 'good'});
@@ -226,7 +232,7 @@ export const RESOLVE = {
 // para que la vista los vaya contando. G.phase pasa a 'impact'.
 export function startImpact() {
   G.snap = JSON.parse(JSON.stringify(G.res));
-  G.snapTiles = G.tiles.map(x => ({t:x.t, dmg:x.dmg, fam:familias(x)}));
+  G.snapTiles = G.tiles.map(x => ({t:x.t, dmg:x.dmg, fam:familias(x), contra:!!x.contra, reforzada:!!x.reforzada}));
   const inicio = fotoInicio();
   G.res.heridos = 0;
   G.workers.forEach(w => { if (w.inj) w.inj = 0; });
@@ -248,8 +254,12 @@ export function startImpact() {
     }
   }
   finDeImpacto(inicio, ev);
-  const need = Math.ceil(G.res.pop / 6);
-  if (G.res.comida >= need) { G.res.comida -= need; G.res.moral = clamp(G.res.moral + 1, 0, 100); ev.push({text:t('log.consume', {n: need}), kind:'info'}); }
+  const need = Math.ceil(G.res.pop / 6), refG = granjasReforzadasOk();
+  if (G.res.comida >= need) {
+    G.res.comida -= need;
+    G.res.moral = clamp(G.res.moral + 1 + refG * GRANJA_REFORZADA_MORAL, 0, 100);
+    ev.push({text:t('log.consume', {n: need}), kind:'info'});
+  }
   else { G.res.comida = 0; G.res.moral = clamp(G.res.moral - 15, 0, 100); G.stats.cause.hambre = (G.stats.cause.hambre || 0) + 1; ev.push({text:t('log.hambre'), kind:'bad'}); }
   if (ctx.dmg === 0) { G.res.moral = clamp(G.res.moral + 5, 0, 100); ev.push({text:t('log.alivio'), kind:'good'}); }
   const nDes = desanimados(G.res.moral);

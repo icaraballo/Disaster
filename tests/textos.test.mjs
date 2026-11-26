@@ -55,7 +55,7 @@ test('los datos tienen sus textos (pueblos, alcaldes, desastres, oficios, casill
   for (const p of PERKS) { pide(`mejoras.${p.id}.nombre`); pide(`mejoras.${p.id}.desc`); }
   for (const e of EVENTS) pide(`eventos.${e.id}.titulo`);
   for (const k of ['agua', 'mar', 'fuego', 'rayo', 'tierra', 'nieve', 'hambre', 'calor']) pide('causas.' + k);
-  for (const k of ['dique', 'escollera', 'sacos', 'pararrayos', 'cortafuegos', 'muro', 'bosque', 'evacuar', 'refugio', 'aljibe']) pide('salvaciones.' + k);
+  for (const k of ['dique', 'escollera', 'sacos', 'pararrayos', 'cortafuegos', 'muro', 'bosque', 'evacuar', 'refugio', 'aljibe', 'terraplen', 'contrafuerte', 'granjaReforzada']) pide('salvaciones.' + k);
   assert.deepEqual(faltan, []);
 });
 
