@@ -11,7 +11,9 @@ módulos, con textos aparte, lógica sin pantalla y tests de equilibrio con bots
 pueblo se ve en un **mapa en 3D**, desde el 21-11 la temporada suma casas que caen en ruinas,
 familias acogidas, previsión que se afina turno a turno, medallas y **refugio**, y desde el 26-11
 (v6) **cada alcalde tiene su propia forma de ganar** (pasiva, acción exclusiva y punto débil), hay
-**autoguardado de partida en curso** y control de velocidad en los impactos (`×1 / ×2 / Saltar`).
+**autoguardado de partida en curso** y control de velocidad en los impactos (`×1 / ×2 / Saltar`). Desde el
+27-11 (v7) la partida cabe en una pantalla vertical: **el mapa queda fijo arriba** y debajo hay un
+panel con pestañas (obras, producir, gente y aviso).
 
 ## Cómo se juega
 
