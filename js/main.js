@@ -85,7 +85,9 @@ function clic(e) {
   if (d.alc) { UI.alc = d.alc; return dibujar(); }
   if (d.heat) { G.heat = !G.heat; return dibujar(); }
   if (d.job) { changeJob(d.job, +d.d); guardarPartida(); return dibujar(); }
-  if (d.act) { G.sel = G.sel === d.act ? null : d.act; G.msg = ''; return dibujar(); }
+  if (d.act) { G.sel = G.sel === d.act ? null : d.act; G.msg = ''; G.insp = null; return dibujar(); }
+  if (d.tab) { UI.tab = d.tab; UI.persona = null; G.insp = null; return dibujar(); }
+  if (d.cancel) { G.sel = null; G.msg = ''; return dibujar(); }
   if (d.person) { if (UI.persona === d.person) { UI.persona = null; G.insp = null; } else { UI.persona = d.person; G.insp = W(d.person).home; } return dibujar(); }
   if (d.tile) return tocarCasilla(+d.tile);
   if (d.close) { UI.persona = null; G.insp = null; return dibujar(); }

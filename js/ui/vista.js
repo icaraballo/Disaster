@@ -22,7 +22,7 @@ import { CAPS } from '../ranking.js';
 import { lineChart, barChart } from './graficos.js';
 
 // Estado de la pantalla (no es de la partida): qué pantalla, reglas desplegadas, elección en «Nueva temporada».
-export const UI = {screen:'menu', howto:false, town:'villarrio', alc:'ingeniera', persona:null, mapa3d:false, velImpacto:1};
+export const UI = {screen:'menu', howto:false, town:'villarrio', alc:'ingeniera', persona:null, mapa3d:false, velImpacto:1, tab:'obras'};
 
 const u = (k, v) => t('ui.' + k, v);
 const nombreAlc = (a) => t('alcaldes.' + a.id + '.nombre');
@@ -81,31 +81,6 @@ function mapHTML(mode) {
     h += '</button>';
   });
   return h + '</div>';
-}
-
-function headerHTML() {
-  let s = '<div class="season">';
-  for (let i = 0; i < TEMPORADA; i++) s += '<div class="' + (i < G.idx ? 'done' : (i === G.idx ? 'now' : '')) + '"></div>';
-  s += '</div>';
-  const alc = ALCALDES.find(a => a.id === G.alc);
-  return '<div class="row"><div><h3 style="font-size:16px">' + townName() + (G.daily ? u('suf.reto') : '') + '</h3><div class="muted" style="font-size:11.5px">' + tituloAlc(alc) + ' (' + nombreAlc(alc) + ')</div></div><div style="display:flex;align-items:center;gap:10px"><div class="muted" style="font-size:13px">' + u('desastreDe', {n: Math.min(G.idx + 1, TEMPORADA), total: TEMPORADA}) + '</div><button class="menubtn" data-go="menu">' + u('botonMenu') + '</button></div></div>' + s;
-}
-
-function resHTML(proj) {
-  const r = G.res, p = proj || {};
-  const d = (k, bad) => { const v = p[k]; if (!v) return ''; const isBad = bad ? v > 0 : v < 0; return '<span class="d ' + (isBad ? 'neg' : 'pos') + '">' + (v > 0 ? '+' : '') + v + '</span>'; };
-  const avail = availableWorkers().length;
-  const cells = [
-    [u('res.vecinos'), r.pop + (r.heridos ? ' <span class="d neg">' + u('res.her', {n: r.heridos}) + '</span>' : '')],
-    [u('res.moral'), r.moral + '%' + d('moral')],
-    [u('res.dinero'), r.dinero + d('dinero')],
-    [u('res.libre'), (G.phase === 'prep' ? freeWorkers().length + '/' : '') + avail],
-    [u('res.madera'), r.madera + d('madera')],
-    [u('res.piedra'), r.piedra + d('piedra')],
-    [u('res.comida'), r.comida + d('comida')],
-    [u('res.riesgo'), r.riesgo + '%' + d('riesgo', true)]
-  ];
-  return '<div class="res">' + cells.map(c => '<div><div class="k">' + c[0] + '</div><div class="v">' + c[1] + '</div></div>').join('') + '</div>';
 }
 
 function forecastOptions() { const f = G.fc; return [[f.real, f.pReal, f.hist[0], true], [f.decoy, 100 - f.pReal, 100 - f.hist[0], false]].sort((a, b) => b[1] - a[1]); }
@@ -245,49 +220,39 @@ function setupHTML() {
   return h + '</div><button class="btn" data-go="start">' + u('setup.empezar') + '</button>';
 }
 
-function forecastHTML() {
-  const f = G.fc;
-  let h = headerHTML() + resHTML();
-  h += '<div class="row"><div class="label">' + u('pueblo') + '</div>' + heatBtn() + '</div>';
-  h += '<div class="mapwrap' + (G.heat ? '' : ' dim') + '">' + mapHTML('view') + '</div>' + heatLegend() + infoHTML();
-  h += '<div class="card" style="display:flex;flex-direction:column;gap:12px">';
-  h += '<div class="row"><div class="label">' + u('parte.titulo') + '</div><div class="chip" style="background:#C2531F">' + u('parte.llegaEn', {n: G.maxTurns, s: pl(G.maxTurns)}) + '</div></div>';
-  h += '<h2 style="font-size:23px">' + u('parte.aviso.' + f.I) + '</h2>';
-  h += forecastBars();
-  h += '<div class="muted" style="font-size:13px;line-height:1.45">' + u('parte.intensidad', {puntos: '●'.repeat(f.I) + '○'.repeat(3 - f.I), precision: u('parte.precision.' + f.lvl)}) + '</div>';
-  h += '<div style="font-size:13px;line-height:1.45">' + precisionHTML() + '<br><span class="muted">' + u('parte.seAfina') + '</span></div>';
-  if (G.alc === 'meteorologa' && G.schedule[G.idx + 1]) h += '<div style="font-size:13px;line-height:1.45">' + u('parte.intuye', {nombre: nombreAlc(ALCALDES.find(a => a.id === 'meteorologa')), que: optName(G.schedule[G.idx + 1].types)}) + '</div>';
-  h += '</div>' + warnings();
-  return h + '<button class="btn" data-go="prep">' + u('parte.empezar') + '</button>';
-}
+// ===== Pantalla de partida (formato A, T-14): mapa fijo arriba, panel con pestañas y botón fijo abajo =====
+// Nada hace scroll salvo el contenido del panel, así el mapa no se pierde nunca de vista.
+const f_ = (k, v) => u('formato.' + k, v);
+const PESTANAS = ['obras', 'producir', 'gente', 'aviso'];
 
-function prepHTML() {
-  let h = headerHTML();
-  h += '<div class="row"><h2 style="font-size:20px">' + u('prep.titulo') + '</h2><div class="muted" style="font-size:13px">' + u('prep.turno', {n: G.turn, total: G.maxTurns}) + '</div></div>';
-  h += resHTML(production());
-  const prox = G.alc === 'meteorologa' && G.schedule[G.idx + 1] ? '<br><span class="muted">' + u('prep.intuye', {que: optName(G.schedule[G.idx + 1].types)}) + '</span>' : '';
-  h += '<div class="row" style="font-size:12.5px;align-items:flex-start"><span><span class="muted">' + u('prep.prevision') + '</span> ' + forecastOptions().map(([k, p, p0]) => optName(k) + ' ' + pctAfinado(p, p0)).join(' · ') + '<br><span class="muted">' + precisionHTML() + (G.turn < G.maxTurns && G.fc.pReal < 100 ? ' · ' + u('prep.seAfina') : '') + '</span>' + prox + '</span>' + heatBtn() + '</div>';
-  h += '<div class="mapwrap">' + mapHTML('prep') + '</div>' + heatLegend();
-  h += '<div class="msg">' + (G.msg || '') + '</div>' + (G.sel ? '' : infoHTML());
-  h += '<div class="label">' + u('prep.tuGente') + '</div>' + peopleHTML();
-  h += '<div class="label">' + u('prep.producir') + '</div><div class="jobs">';
-  const free = freeWorkers().length;
-  const gOk = granjasOk(), bGranja = gOk >= 2 ? 2 : gOk, gRef = granjasReforzadasOk();
-  const rindeTalar = 2 - (G.alc === 'agricultor' ? AGRICULTOR_TALAR_MENOS : 0) + (G.perks.carpinteros ? 1 : 0);
-  const rindeGranja = bGranja > 0 ? bGranja + (G.alc === 'agricultor' ? AGRICULTOR_GRANJA_BONUS : 0) + gRef * GRANJA_REFORZADA_COMIDA : 0;
-  const rindeDinero = 15 + (G.alc === 'tesorero' ? TESORERO_RECAUDAR_BONUS : 0);
-  const rindeMoral = G.alc === 'tesorero' ? TESORERO_MORAL_RECAUDAR : 2;
-  const yields = {talar:u('prep.rinde.talar', {n: rindeTalar}), cantera:u('prep.rinde.cantera'), granja:u('prep.rinde.granja', {n: rindeGranja, sequia: G.dryFarm && !gRef ? u('prep.rinde.sequia') : ''}), recaudar:u('prep.rinde.recaudar', {dinero: rindeDinero, moral: rindeMoral})};
-  JOBS.forEach(k => {
-    const n = t('trabajos.' + k);
-    const who = G.alloc[k].map(id => W(id).name).join(', ');
-    const cnt = G.alloc[k].length;
-    h += '<div class="job' + (cnt ? ' on' : '') + (k === 'talar' || k === 'cantera' ? ' danger' : '') + '"><div class="n">' + n + '</div><div class="y">' + yields[k] + '</div><div class="who">' + esc(who) + '</div><b class="cnt">' + cnt + '</b>'
-      + '<button class="half l" data-job="' + k + '" data-d="-1" aria-label="' + esc(u('prep.quitar', {trabajo: n})) + '"' + (cnt ? '' : ' disabled') + '><span aria-hidden="true">−</span></button>'
-      + '<button class="half r" data-job="' + k + '" data-d="1" aria-label="' + esc(u('prep.anadir', {trabajo: n})) + '"' + (free > 0 ? '' : ' disabled') + '><span aria-hidden="true">+</span></button></div>';
-  });
-  h += '</div><div class="label">' + u('prep.construir') + '</div><div class="acts">';
+function cabecera() {
+  let s = '<div class="season">';
+  for (let i = 0; i < TEMPORADA; i++) s += '<div class="' + (i < G.idx ? 'done' : (i === G.idx ? 'now' : '')) + '"></div>';
+  const alc = ALCALDES.find(a => a.id === G.alc);
+  const turno = G.phase === 'prep' ? f_('turno', {n: G.turn, total: G.maxTurns}) : '';
+  return '<div class="hd"><div class="hd-t"><b>' + townName() + (G.daily ? u('suf.reto') : '') + '</b><span class="muted"> · ' + f_('desastre', {n: Math.min(G.idx + 1, TEMPORADA), total: TEMPORADA}) + turno + '</span><div class="muted hd-alc">' + tituloAlc(alc) + ' (' + nombreAlc(alc) + ')</div></div><button class="menubtn" data-go="menu">' + u('botonMenu') + '</button></div>' + s + '</div>';
+}
+function recursos(proj) {
+  const r = G.res, p = proj || {};
+  const d = (k, bad) => { const v = p[k]; if (!v) return ''; const isBad = bad ? v > 0 : v < 0; return '<i class="' + (isBad ? 'neg' : 'pos') + '">' + (v > 0 ? '+' : '') + v + '</i>'; };
+  const cells = [['vecinos', r.pop + (r.heridos ? '<i class="neg">' + u('res.her', {n: r.heridos}) + '</i>' : '')], ['moral', r.moral + '%' + d('moral')], ['dinero', r.dinero + d('dinero')],
+    ['libres', (G.phase === 'prep' ? freeWorkers().length + '/' : '') + availableWorkers().length], ['madera', r.madera + d('madera')], ['piedra', r.piedra + d('piedra')],
+    ['comida', r.comida + d('comida')], ['ladera', r.riesgo + '%' + d('riesgo', true)]];
+  return '<div class="resmini">' + cells.map(c => '<div><span class="k">' + f_('res.' + c[0]) + '</span><span class="v">' + c[1] + '</span></div>').join('') + '</div>';
+}
+function lineaPrevision() {
+  return '<div class="prevline"><span class="muted">' + u('prep.prevision') + '</span> ' + forecastOptions().map(([k, p]) => optName(k) + ' <b>' + p + '%</b>').join(' · ') + '</div>';
+}
+function zonaMapa(mode) {
+  const riesgo = mode === 'impact' ? '' : '<div class="mz-heat">' + heatBtn() + '</div>';
+  return '<div class="mapzone">' + mapHTML(mode) + riesgo + '</div>';
+}
+function barraObra() {
+  return '<div class="selbar"><div><b>' + t('acciones.' + G.sel + '.nombre') + '</b> <span class="muted">· ' + costLabelObra(G.sel) + '</span><div class="muted" style="font-size:11.5px">' + f_('tocaCasilla') + '</div></div><button class="cancel" data-cancel="1">' + f_('cancelar') + '</button></div>';
+}
+function obrasHTML(tira) {
   const alcColor = (ALCALDES.find(a => a.id === G.alc) || {}).color || '#7A5A9E';
+  let h = '<div class="acts' + (tira ? ' strip' : '') + '">';
   for (const k in ACTIONS) {
     const act = ACTIONS[k];
     if (act.alc && act.alc !== G.alc) continue;
@@ -298,30 +263,89 @@ function prepHTML() {
   }
   h += '</div>';
   if (G.sel) h += '<div class="hint">' + t('acciones.' + G.sel + '.desc') + (G.workers.some(w => w.of === 'albanil' && !w.gone) && ['piedra','madera'].some(m => (ACTIONS[G.sel].cost()[m] || 0) > 0) ? ' ' + u('prep.albanil') : '') + '</div>';
-  h += warnings();
-  return h + '<button class="btn" data-go="endturn">' + u(G.turn < G.maxTurns ? 'prep.terminarTurno' : 'prep.terminarEsperar') + '</button>';
+  else if (!tira) h += '<div class="muted" style="font-size:11.5px">' + f_('ayudaObras') + '</div>';
+  return h;
+}
+function producirHTML() {
+  let h = '<div class="jobs">';
+  const free = freeWorkers().length;
+  const gOk = granjasOk(), bGranja = gOk >= 2 ? 2 : gOk, gRef = granjasReforzadasOk();
+  const rindeTalar = 2 - (G.alc === 'agricultor' ? AGRICULTOR_TALAR_MENOS : 0) + (G.perks.carpinteros ? 1 : 0);
+  const rindeGranja = bGranja > 0 ? bGranja + (G.alc === 'agricultor' ? AGRICULTOR_GRANJA_BONUS : 0) + gRef * GRANJA_REFORZADA_COMIDA : 0;
+  const rindeDinero = 15 + (G.alc === 'tesorero' ? TESORERO_RECAUDAR_BONUS : 0);
+  const rindeMoral = G.alc === 'tesorero' ? TESORERO_MORAL_RECAUDAR : 2;
+  const yields = {talar:u('prep.rinde.talar', {n: rindeTalar}), cantera:u('prep.rinde.cantera'), granja:u('prep.rinde.granja', {n: rindeGranja, sequia: G.dryFarm && !gRef ? u('prep.rinde.sequia') : ''}), recaudar:u('prep.rinde.recaudar', {dinero: rindeDinero, moral: rindeMoral})};
+  JOBS.forEach(k => {
+    const n = t('trabajos.' + k), who = G.alloc[k].map(id => W(id).name).join(', '), cnt = G.alloc[k].length;
+    h += '<div class="job' + (cnt ? ' on' : '') + (k === 'talar' || k === 'cantera' ? ' danger' : '') + '"><div class="n">' + n + '</div><div class="y">' + yields[k] + '</div><div class="who">' + esc(who) + '</div><b class="cnt">' + cnt + '</b>'
+      + '<button class="half l" data-job="' + k + '" data-d="-1" aria-label="' + esc(u('prep.quitar', {trabajo: n})) + '"' + (cnt ? '' : ' disabled') + '><span aria-hidden="true">−</span></button>'
+      + '<button class="half r" data-job="' + k + '" data-d="1" aria-label="' + esc(u('prep.anadir', {trabajo: n})) + '"' + (free > 0 ? '' : ' disabled') + '><span aria-hidden="true">+</span></button></div>';
+  });
+  return h + '</div><div class="muted" style="font-size:11.5px">' + f_('ayudaProducir') + '</div>';
+}
+function parteHTML() {
+  const f = G.fc;
+  let h = '<div class="card" style="display:flex;flex-direction:column;gap:10px"><div class="row"><div class="label">' + u('parte.titulo') + '</div><div class="chip" style="background:#C2531F">' + u('parte.llegaEn', {n: G.maxTurns, s: pl(G.maxTurns)}) + '</div></div>';
+  h += '<h2 style="font-size:19px">' + u('parte.aviso.' + f.I) + '</h2>' + forecastBars();
+  h += '<div class="muted" style="font-size:12.5px;line-height:1.45">' + u('parte.intensidad', {puntos: '●'.repeat(f.I) + '○'.repeat(3 - f.I), precision: u('parte.precision.' + f.lvl)}) + '</div>';
+  h += '<div style="font-size:12.5px;line-height:1.45">' + precisionHTML() + '<br><span class="muted">' + (G.phase === 'prep' ? (G.turn < G.maxTurns && f.pReal < 100 ? cap(u('prep.seAfina')) + '.' : '') : u('parte.seAfina')) + '</span></div>';
+  if (G.alc === 'meteorologa' && G.schedule[G.idx + 1]) h += '<div style="font-size:12.5px;line-height:1.45">' + u('parte.intuye', {nombre: nombreAlc(ALCALDES.find(a => a.id === 'meteorologa')), que: optName(G.schedule[G.idx + 1].types)}) + '</div>';
+  return h + '</div>' + warnings() + heatLegend();
+}
+const nAvisos = () => (warnings().match(/class="warnline"/g) || []).length;
+// La ficha de la casilla tocada sustituye al contenido de la pestaña (con una persona elegida no: su casa sólo se marca).
+const fichaAbierta = () => G.insp != null && !UI.persona && !G.sel;
+const mensaje = () => G.msg ? '<div class="msg">' + G.msg + '</div>' : '';
+
+function seccion(k) {
+  if (k === 'obras') return obrasHTML(false);
+  if (k === 'producir') return producirHTML();
+  if (k === 'gente') return peopleHTML();
+  return parteHTML();
 }
 
-function impactHTML() {
-  const types = G.fc.real, done = G.impact.shown >= G.impact.events.length;
-  let h = headerHTML();
-  h += '<div class="banner" style="background:' + DIS[types[0]].color + '"><div class="label" style="color:rgba(255,255,255,.85)">' + u('impacto.titulo', {n: G.idx + 1}) + '</div><h2 style="font-size:24px">' + u('impacto.nombre', {lista: nombreDesastres(types)}) + '</h2><div style="font-size:13px;opacity:.9">' + u('impacto.previsto', {p: G.fc.pReal}) + '</div></div>';
-  h += '<div class="mapwrap">' + mapHTML('impact') + '</div>';
-  if (!done) {
-    h += '<div class="row speed-bar"><span class="muted" style="font-size:12px">' + u('impacto.ritmo') + '</span><div class="speed-btns">'
+// Contenido del panel y botón fijo de cada fase.
+function panelFase() {
+  if (G.phase === 'forecast') return {scroll: 'forecast', body: (fichaAbierta() ? infoHTML() : '') + parteHTML(), foot: '<button class="btn" data-go="prep">' + u('parte.empezar') + '</button>'};
+  if (G.phase === 'impact') {
+    const types = G.fc.real, done = G.impact.shown >= G.impact.events.length;
+    let b = '<div class="banner mini" style="background:' + DIS[types[0]].color + '"><div class="label" style="color:rgba(255,255,255,.85)">' + u('impacto.titulo', {n: G.idx + 1}) + '</div><b style="font-size:16px">' + u('impacto.nombre', {lista: nombreDesastres(types)}) + '</b> <span style="opacity:.9;font-size:12px">' + u('impacto.previsto', {p: G.fc.pReal}) + '</span></div>';
+    if (!done) b += '<div class="row speed-bar"><span class="muted" style="font-size:12px">' + u('impacto.ritmo') + '</span><div class="speed-btns">'
       + '<button class="spd' + (UI.velImpacto === 1 ? ' on' : '') + '" data-speed="1">' + u('impacto.vel1') + '</button>'
       + '<button class="spd' + (UI.velImpacto === 2 ? ' on' : '') + '" data-speed="2">' + u('impacto.vel2') + '</button>'
       + '<button class="spd skip" data-skip="1">' + u('impacto.saltar') + '</button></div></div>';
+    // Lo último que ha pasado, arriba: el panel es bajo y así no hay que bajar para verlo.
+    b += '<div class="log">' + G.impact.events.slice(0, G.impact.shown).map(e => '<div class="e k-' + e.kind + '"><div class="dot"></div><div>' + e.text + '</div></div>').reverse().join('') + '</div>';
+    return {scroll: 'impact', body: b, foot: '<button class="btn" data-go="result"' + (done ? '' : ' disabled') + '>' + u(done ? 'impacto.ver' : 'impacto.espera') + '</button>'};
   }
-  h += '<div class="card"><div class="log">' + G.impact.events.slice(0, G.impact.shown).map(e => '<div class="e k-' + e.kind + '"><div class="dot"></div><div>' + e.text + '</div></div>').join('') + '</div></div>';
-  return h + '<button class="btn" data-go="result"' + (done ? '' : ' disabled') + '>' + u(done ? 'impacto.ver' : 'impacto.espera') + '</button>';
+  if (G.phase === 'result') return {scroll: 'result', body: resultHTML(), foot: ''};
+  return {scroll: 'event', body: eventHTML(), foot: ''};
+}
+
+function partidaHTML() {
+  const prep = G.phase === 'prep';
+  const mode = prep ? 'prep' : (G.phase === 'impact' ? 'impact' : 'view');
+  const grande = (prep && G.sel) || G.phase === 'impact';
+  let h = '<div class="shell' + (grande ? ' big' : '') + (G.phase === 'impact' ? ' imp' : '') + '">' + cabecera() + recursos(prep ? production() : null) + (prep ? lineaPrevision() : '') + zonaMapa(mode) + '<div class="panel">';
+  if (prep) {
+    if (G.sel) h += mensaje() + barraObra() + obrasHTML(true);
+    else {
+      const n = nAvisos();
+      h += '<div class="tabs" role="tablist">' + PESTANAS.map(k => '<button class="tab' + (UI.tab === k && !fichaAbierta() ? ' on' : '') + '" role="tab" aria-selected="' + (UI.tab === k && !fichaAbierta()) + '" data-tab="' + k + '">' + f_('pestana.' + k) + (k === 'aviso' && n ? ' <span class="nb">' + n + '</span>' : '') + '</button>').join('') + '</div>';
+      h += '<div class="pbody" data-scroll="' + (fichaAbierta() ? 'ficha' : UI.tab) + '">' + mensaje() + (fichaAbierta() ? infoHTML() : seccion(UI.tab)) + '</div>';
+    }
+    h += '<div class="foot"><button class="btn" data-go="endturn">' + u(G.turn < G.maxTurns ? 'prep.terminarTurno' : 'prep.terminarEsperar') + '</button></div>';
+  } else {
+    const p = panelFase();
+    h += '<div class="pbody" data-scroll="' + p.scroll + '">' + p.body + '</div>' + (p.foot ? '<div class="foot">' + p.foot + '</div>' : '');
+  }
+  return h + '</div></div>';
 }
 
 function resultHTML() {
   const r = G.res, s = G.snap;
   const dl = (a, b) => { const v = a - b; return v ? ' <span style="font-size:13px" class="' + (v > 0 ? 'pos' : 'neg') + '">' + (v > 0 ? '+' : '') + v + '</span>' : ''; };
-  let h = headerHTML();
-  h += '<div><div class="label" style="color:' + (G.lost ? '#A8441A' : '#2F6B37') + '">' + u(G.lost ? 'resultado.cae' : 'resultado.superado', {n: G.idx + 1}) + '</div><h2 style="font-size:26px">' + u(G.lost ? 'resultado.caeTitulo' : 'resultado.aguantaTitulo', {pueblo: townName()}) + '</h2></div>';
+  let h = '<div><div class="label" style="color:' + (G.lost ? '#A8441A' : '#2F6B37') + '">' + u(G.lost ? 'resultado.cae' : 'resultado.superado', {n: G.idx + 1}) + '</div><h2 style="font-size:26px">' + u(G.lost ? 'resultado.caeTitulo' : 'resultado.aguantaTitulo', {pueblo: townName()}) + '</h2></div>';
   h += '<div class="grid2">' +
     '<div class="stat"><div class="k">' + u('res.vecinos') + '</div><div class="v">' + r.pop + dl(r.pop, s.pop) + '</div></div>' +
     '<div class="stat"><div class="k">' + u('res.moral') + '</div><div class="v">' + r.moral + '%' + dl(r.moral, s.moral) + '</div></div>' +
@@ -341,10 +365,9 @@ function resultHTML() {
 
 function eventHTML() {
   const e = G.event;
-  let h = headerHTML();
+  let h = '';
   if (G.msg) h += '<div class="goodline">' + G.msg + '</div>';
   h += '<div class="card" style="display:flex;flex-direction:column;gap:8px"><div class="label">' + u('evento.mientras') + '</div><h2 style="font-size:22px">' + e.titulo + '</h2><div style="font-size:14.5px;line-height:1.5">' + esc(e.texto) + '</div></div>';
-  h += resHTML();
   return h + '<div style="display:flex;flex-direction:column;gap:8px">' + e.opts.filter(o => !o.ok || o.ok()).map((o, k) => '<button class="ev-opt" data-ev="' + k + '"><div class="n">' + o.l + '</div><div class="dd">' + esc(o.d) + '</div></button>').join('') + '</div>';
 }
 
@@ -377,11 +400,14 @@ export function render() {
   let h = '';
   if (UI.screen === 'menu' || (!G && UI.screen !== 'setup')) h = menuHTML();
   else if (UI.screen === 'setup') h = setupHTML();
-  else if (G.phase === 'forecast') h = forecastHTML();
-  else if (G.phase === 'prep') h = prepHTML();
-  else if (G.phase === 'impact') h = impactHTML();
-  else if (G.phase === 'result') h = resultHTML();
-  else if (G.phase === 'event') h = eventHTML();
   else if (G.phase === 'end') h = endHTML();
+  else h = partidaHTML();
+  const fija = UI.screen === 'game' && !!G && G.phase !== 'end';
+  // El panel se rehace en cada clic: se guarda y se recupera su scroll si sigue siendo el mismo.
+  const scroll = {};
+  if (app.querySelectorAll) app.querySelectorAll('[data-scroll]').forEach(el => { scroll[el.dataset.scroll] = el.scrollTop; });
+  if (app.classList) app.classList.toggle('en-shell', fija);
+  if (document.body) document.body.classList.toggle('juego', fija);
   app.innerHTML = h;
+  if (app.querySelectorAll) app.querySelectorAll('[data-scroll]').forEach(el => { if (scroll[el.dataset.scroll] != null) el.scrollTop = scroll[el.dataset.scroll]; });
 }

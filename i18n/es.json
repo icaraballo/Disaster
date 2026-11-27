@@ -453,6 +453,16 @@
       "seAfina": "La previsión se afina en cada turno: esperar da certeza, pero quita tiempo para preparar.",
       "empezar": "Empezar a preparar"
     },
+    "formato": {
+      "turno": " · turno {n}/{total}",
+      "desastre": "desastre {n}/{total}",
+      "res": {"vecinos": "Vecinos", "moral": "Moral", "dinero": "Dinero", "libres": "Libres", "madera": "Madera", "piedra": "Piedra", "comida": "Comida", "ladera": "Ladera"},
+      "pestana": {"obras": "Obras", "producir": "Producir", "gente": "Gente", "aviso": "Aviso"},
+      "tocaCasilla": "Toca una casilla marcada en el mapa",
+      "cancelar": "Cancelar",
+      "ayudaObras": "Elige una obra y tócala en el mapa. Si lo hace alguien albañil, ahorra 1 de material.",
+      "ayudaProducir": "Toca la mitad derecha de una tarjeta para sumar y la izquierda para quitar."
+    },
     "prep": {
       "titulo": "Preparación",
       "turno": "Turno <b style=\"color:#23262B\">{n}</b> de {total}",
