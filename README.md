@@ -13,7 +13,8 @@ familias acogidas, previsión que se afina turno a turno, medallas y **refugio**
 (v6) **cada alcalde tiene su propia forma de ganar** (pasiva, acción exclusiva y punto débil), hay
 **autoguardado de partida en curso** y control de velocidad en los impactos (`×1 / ×2 / Saltar`). Desde el
 27-11 (v7) la partida cabe en una pantalla vertical: **el mapa queda fijo arriba** y debajo hay un
-panel con pestañas (obras, producir, gente y aviso).
+panel con pestañas (obras, producir, gente y aviso). Desde el 27-11 (v8) hay **11 temas**
+(4 principales, con uno oscuro, y 7 que se desbloquean jugando) y el panel se puede plegar o agrandar.
 
 ## Cómo se juega
 

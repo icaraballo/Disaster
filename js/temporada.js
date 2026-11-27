@@ -1,6 +1,7 @@
 // Lo que pasa entre desastres (resultado, mejora, evento) y al acabar la temporada. Sin pantalla.
 import { TOWNS } from '../data/pueblos.js';
 import { ALCALDES } from '../data/alcaldes.js';
+import { TEMAS } from '../data/temas.js';
 import { TEMPORADA, VECINOS_MINIMOS, MEDALLAS, MEDALLA_PLATA, MEDALLA_ORO } from '../data/balance.js';
 import { RUINAS, SOLAR } from './casas.js';
 import { RS, pick, shuffle } from './azar.js';
@@ -63,14 +64,16 @@ export function finish() {
   PROG.total += G.lost ? G.idx : TEMPORADA;
   PROG.seasons += 1;
   PROG.maxIdx[G.town] = Math.max(PROG.maxIdx[G.town] || 0, reached);
-  if (!G.lost) PROG.wins[G.town] = (PROG.wins[G.town] || 0) + 1;
+  if (!G.lost) { PROG.wins[G.town] = (PROG.wins[G.town] || 0) + 1; PROG.winsAlc = {...(PROG.winsAlc || {}), [G.alc]: ((PROG.winsAlc || {})[G.alc] || 0) + 1}; }
   G.medalla = medalla();
+  if (G.daily && G.medalla === 'oro') PROG.retoOro = (PROG.retoOro || 0) + 1;
   G.medallaNueva = !!G.medalla && MEDALLAS.indexOf(G.medalla) > MEDALLAS.indexOf((PROG.medallas || {})[G.town]);
   if (G.medallaNueva) PROG.medallas = {...(PROG.medallas || {}), [G.town]: G.medalla};
   G.record = G.final > (PROG.best || 0); PROG.best = Math.max(PROG.best || 0, G.final);
   G.unlocked = [];
   Object.keys(TOWNS).forEach(k => { const u = TOWNS[k].unlock; if (u && !cumple(u, before) && cumple(u, PROG)) G.unlocked.push(t('fin.desbloqueoPueblo', {nombre: t('pueblos.' + k + '.nombre')})); });
   ALCALDES.forEach(a => { const u = a.unlock; if (u && !cumple(u, before) && cumple(u, PROG)) G.unlocked.push(t('fin.desbloqueoAlcalde', {titulo: t('alcaldes.' + a.id + '.titulo'), nombre: t('alcaldes.' + a.id + '.nombre')})); });
+  TEMAS.forEach(m => { if (m.unlock && !cumple(m.unlock, before) && cumple(m.unlock, PROG)) G.unlocked.push(t('fin.desbloqueoTema', {nombre: t('temas.' + m.id + '.nombre')})); });
   saveProg();
   if (G.daily) submitDaily(G.final);
 }

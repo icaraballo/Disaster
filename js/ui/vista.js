@@ -16,7 +16,9 @@ import { ACTIONS, costLabel, costLabelObra, planObra, construccion, nombreConstr
 import { production } from '../turnos.js';
 import { riskMap, tileRisks, tileState } from '../riesgo.js';
 import { retoDelDia } from '../partida.js';
-import { PROG, unlockedTown, unlockedAlc } from '../progreso.js';
+import { PROG, unlockedTown, unlockedAlc, unlockedTema } from '../progreso.js';
+import { TEMAS } from '../../data/temas.js';
+import { AJUSTES, temaVisible } from './temas.js';
 import { leerResumenGuardado, falloGuardado } from '../guardado.js';
 import { CAPS } from '../ranking.js';
 import { lineChart, barChart } from './graficos.js';
@@ -197,6 +199,7 @@ function menuHTML() {
   h += '<button class="btn' + (sav ? ' ghost' : '') + '" data-go="setup">' + u('menu.nueva') + '<small>' + u('menu.nuevaSub') + '</small></button>';
   h += '<button class="btn ghost" data-go="daily">' + u('menu.reto') + '<small>' + u('menu.retoSub', {pueblo: t('pueblos.' + dTown + '.nombre'), alcalde: tituloAlc(dAlc)}) + '</small></button>';
   h += ranking();
+  h += '<button class="btn ghost" data-go="aspecto">' + u('temas.boton') + '<small>' + u('temas.botonSub', {tema: t('temas.' + temaVisible() + '.nombre'), n: TEMAS.filter(m => unlockedTema(m.id)).length, total: TEMAS.length}) + '</small></button>';
   h += '<button class="btn ghost" data-go="howto">' + u(UI.howto ? 'menu.ocultarReglas' : 'menu.comoSeJuega') + '</button>';
   if (UI.howto) h += '<div class="card"><ul class="rules">' + ['aviso','prep','ojo','impacto','casas','refugio','entre','pierdes','medallas'].map(k => '<li>' + u('reglas.' + k, {n: VECINOS_MINIMOS, plata: MEDALLA_PLATA.vecinos, plataMoral: MEDALLA_PLATA.moral, oro: MEDALLA_ORO.vecinos, oroMoral: MEDALLA_ORO.moral}) + '</li>').join('') + '</ul></div>';
   const nT = Object.keys(TOWNS).filter(unlockedTown).length, nA = ALCALDES.filter(unlockedAlc).length;
@@ -218,6 +221,21 @@ function setupHTML() {
     h += '<button class="pick-card' + (UI.alc === a.id ? ' sel' : '') + (ok ? '' : ' locked') + '" ' + (ok ? 'data-alc="' + a.id + '"' : 'disabled') + '><div class="sw" style="background:' + a.color + '">' + nombreAlc(a).charAt(0) + '</div><div><div class="n">' + tituloAlc(a) + ' <span class="muted" style="font-weight:500;font-size:12px">· ' + nombreAlc(a) + '</span></div><div class="dd">' + (ok ? t('alcaldes.' + a.id + '.desc') : u('setup.bloqueado', {cond: t('alcaldes.' + a.id + '.desbloqueo')})) + '</div></div></button>';
   });
   return h + '</div><button class="btn" data-go="start">' + u('setup.empezar') + '</button>';
+}
+
+// ===== Aspecto (T-15): elegir tema. Los bloqueados dicen cómo se consiguen; «Desbloquear todo» los abre. =====
+const muestraTema = (m) => '<div class="sw sw-tema" aria-hidden="true">' + m.muestra.map(c => '<span style="background:' + c + '"></span>').join('') + '</div>';
+function aspectoHTML() {
+  let h = '<div class="row"><h2 style="font-size:22px">' + u('temas.titulo') + '</h2><button class="x" data-go="menu" aria-label="' + u('setup.volver') + '">✕</button></div>';
+  h += '<div class="muted" style="font-size:13.5px;line-height:1.45">' + u('temas.intro') + '</div>';
+  const tarjeta = (m) => {
+    const ok = unlockedTema(m.id), sel = AJUSTES.tema === m.id;
+    return '<button class="pick-card' + (sel ? ' sel' : '') + (ok ? '' : ' locked') + '" ' + (ok ? 'data-tema="' + m.id + '"' : 'disabled') + ' aria-pressed="' + sel + '">' + muestraTema(m) + '<div><div class="n">' + t('temas.' + m.id + '.nombre') + (m.oscuro ? ' <span class="tag">' + u('temas.oscuro') + '</span>' : '') + '</div><div class="dd">' + (ok ? t('temas.' + m.id + '.desc') : u('setup.bloqueado', {cond: t('temas.' + m.id + '.desbloqueo')})) + '</div></div></button>';
+  };
+  h += '<div class="label">' + u('temas.principales') + '</div><div style="display:flex;flex-direction:column;gap:8px">' + TEMAS.filter(m => m.principal).map(tarjeta).join('') + '</div>';
+  h += '<div class="label">' + u('temas.desbloqueables') + '</div><div style="display:flex;flex-direction:column;gap:8px">' + TEMAS.filter(m => !m.principal).map(tarjeta).join('') + '</div>';
+  h += '<div class="card"><label class="toggle"><input type="checkbox" data-nocheauto="1"' + (AJUSTES.nocheAuto ? ' checked' : '') + '> ' + u('temas.nocheAuto') + '</label></div>';
+  return h + '<button class="btn" data-go="menu">' + u('temas.listo') + '</button>';
 }
 
 // ===== Pantalla de partida (formato A, T-14): mapa fijo arriba, panel con pestañas y botón fijo abajo =====
@@ -322,21 +340,33 @@ function panelFase() {
   return {scroll: 'event', body: eventHTML(), foot: ''};
 }
 
+// El tirador cambia la altura del panel: plegado → normal → grande → plegado, con un toque (sin
+// arrastrar, para no chocar con la cámara 3D). Fuera de la preparación, el plegado se ve como normal.
+function tirador() {
+  const sig = ({plegado: 'normal', normal: 'grande', grande: 'plegado'})[AJUSTES.panel];
+  return '<button class="tirador" data-panel="1" aria-label="' + esc(u('panel.aria', {altura: u('panel.' + AJUSTES.panel), siguiente: u('panel.' + sig)})) + '"><span></span></button>';
+}
+
 function partidaHTML() {
   const prep = G.phase === 'prep';
   const mode = prep ? 'prep' : (G.phase === 'impact' ? 'impact' : 'view');
   const grande = (prep && G.sel) || G.phase === 'impact';
-  let h = '<div class="shell' + (grande ? ' big' : '') + (G.phase === 'impact' ? ' imp' : '') + '">' + cabecera() + recursos(prep ? production() : null) + (prep ? lineaPrevision() : '') + zonaMapa(mode) + '<div class="panel">';
+  // Altura del panel (T-15): plegado (sólo pestañas y botón; el mapa crece), normal o grande. Plegado
+  // sólo en la preparación: en el resto de fases el panel tiene que dejar elegir y leer.
+  const alt = grande ? 'normal' : (AJUSTES.panel === 'plegado' && !prep ? 'normal' : AJUSTES.panel);
+  let h = '<div class="shell p-' + alt + (grande ? ' big' : '') + (G.phase === 'impact' ? ' imp' : '') + '">' + cabecera() + recursos(prep ? production() : null) + (prep ? lineaPrevision() : '') + zonaMapa(mode) + '<div class="panel">';
   if (prep) {
     if (G.sel) h += mensaje() + barraObra() + obrasHTML(true);
     else {
       const n = nAvisos();
+      h += tirador();
       h += '<div class="tabs" role="tablist">' + PESTANAS.map(k => '<button class="tab' + (UI.tab === k && !fichaAbierta() ? ' on' : '') + '" role="tab" aria-selected="' + (UI.tab === k && !fichaAbierta()) + '" data-tab="' + k + '">' + f_('pestana.' + k) + (k === 'aviso' && n ? ' <span class="nb">' + n + '</span>' : '') + '</button>').join('') + '</div>';
       h += '<div class="pbody" data-scroll="' + (fichaAbierta() ? 'ficha' : UI.tab) + '">' + mensaje() + (fichaAbierta() ? infoHTML() : seccion(UI.tab)) + '</div>';
     }
     h += '<div class="foot"><button class="btn" data-go="endturn">' + u(G.turn < G.maxTurns ? 'prep.terminarTurno' : 'prep.terminarEsperar') + '</button></div>';
   } else {
     const p = panelFase();
+    if (G.phase !== 'impact') h += tirador();
     h += '<div class="pbody" data-scroll="' + p.scroll + '">' + p.body + '</div>' + (p.foot ? '<div class="foot">' + p.foot + '</div>' : '');
   }
   return h + '</div></div>';
@@ -345,7 +375,7 @@ function partidaHTML() {
 function resultHTML() {
   const r = G.res, s = G.snap;
   const dl = (a, b) => { const v = a - b; return v ? ' <span style="font-size:13px" class="' + (v > 0 ? 'pos' : 'neg') + '">' + (v > 0 ? '+' : '') + v + '</span>' : ''; };
-  let h = '<div><div class="label" style="color:' + (G.lost ? '#A8441A' : '#2F6B37') + '">' + u(G.lost ? 'resultado.cae' : 'resultado.superado', {n: G.idx + 1}) + '</div><h2 style="font-size:26px">' + u(G.lost ? 'resultado.caeTitulo' : 'resultado.aguantaTitulo', {pueblo: townName()}) + '</h2></div>';
+  let h = '<div><div class="label" style="color:' + (G.lost ? 'var(--bad)' : 'var(--ok)') + '">' + u(G.lost ? 'resultado.cae' : 'resultado.superado', {n: G.idx + 1}) + '</div><h2 style="font-size:26px">' + u(G.lost ? 'resultado.caeTitulo' : 'resultado.aguantaTitulo', {pueblo: townName()}) + '</h2></div>';
   h += '<div class="grid2">' +
     '<div class="stat"><div class="k">' + u('res.vecinos') + '</div><div class="v">' + r.pop + dl(r.pop, s.pop) + '</div></div>' +
     '<div class="stat"><div class="k">' + u('res.moral') + '</div><div class="v">' + r.moral + '%' + dl(r.moral, s.moral) + '</div></div>' +
@@ -374,8 +404,8 @@ function eventHTML() {
 function endHTML() {
   const won = !G.lost, hist = G.stats.hist;
   let h = '<div style="display:flex;flex-direction:column;gap:6px;margin-top:8px"><div class="label">' + u('fin.titulo') + (G.daily ? u('suf.reto') : '') + '</div><h1 style="font-size:30px">' + u(won ? 'fin.sobrevive' : 'fin.noAguanta', {pueblo: townName()}) + '</h1><div class="muted" style="font-size:15px">' + u(won ? 'fin.superado' : 'fin.llegaste', {total: TEMPORADA, n: G.idx + 1}) + '</div></div>';
-  if (G.medalla) h += '<div class="card row medalla m-' + G.medalla + '"><div><div class="label">' + u('fin.medalla') + '</div><div style="font-family:Rubik,sans-serif;font-weight:700;font-size:24px">' + u('medallas.' + G.medalla) + '</div><div class="muted" style="font-size:13px">' + u('medallas.' + G.medalla + 'Por', {plata: MEDALLA_PLATA.vecinos, plataMoral: MEDALLA_PLATA.moral, oro: MEDALLA_ORO.vecinos, oroMoral: MEDALLA_ORO.moral}) + '</div></div><div style="text-align:right;font-size:13px">' + (G.medallaNueva ? '<b style="color:#2F6B37">' + u('fin.medallaNueva') + '</b>' : u('fin.medallaMejor', {medalla: u('medallas.' + ((PROG.medallas || {})[G.town] || G.medalla))})) + '</div></div>';
-  h += '<div class="card row"><div><div class="label">' + u('fin.puntuacion') + '</div><div style="font-family:Rubik,sans-serif;font-weight:700;font-size:34px">' + G.final + '</div></div><div style="text-align:right;font-size:13px" class="muted">' + (G.record ? '<b style="color:#2F6B37">' + u('fin.record') + '</b>' : u('fin.recordActual', {n: PROG.best})) + '</div></div>';
+  if (G.medalla) h += '<div class="card row medalla m-' + G.medalla + '"><div><div class="label">' + u('fin.medalla') + '</div><div style="font-family:var(--f-t);font-weight:700;font-size:24px">' + u('medallas.' + G.medalla) + '</div><div class="muted" style="font-size:13px">' + u('medallas.' + G.medalla + 'Por', {plata: MEDALLA_PLATA.vecinos, plataMoral: MEDALLA_PLATA.moral, oro: MEDALLA_ORO.vecinos, oroMoral: MEDALLA_ORO.moral}) + '</div></div><div style="text-align:right;font-size:13px">' + (G.medallaNueva ? '<b style="color:var(--ok)">' + u('fin.medallaNueva') + '</b>' : u('fin.medallaMejor', {medalla: u('medallas.' + ((PROG.medallas || {})[G.town] || G.medalla))})) + '</div></div>';
+  h += '<div class="card row"><div><div class="label">' + u('fin.puntuacion') + '</div><div style="font-family:var(--f-t);font-weight:700;font-size:34px">' + G.final + '</div></div><div style="text-align:right;font-size:13px" class="muted">' + (G.record ? '<b style="color:var(--ok)">' + u('fin.record') + '</b>' : u('fin.recordActual', {n: PROG.best})) + '</div></div>';
   if (G.unlocked && G.unlocked.length) h += '<div class="goodline"><b>' + u('fin.desbloqueado') + '</b> ' + G.unlocked.join(' · ') + '</div>';
   if (G.daily) { h += G.submitted ? '<div class="goodline">' + u('fin.enRanking') + '</div>' : (G.submitFail ? '<div class="warnline">' + u('fin.rankingFallo') + '</div>' : ''); h += ranking(); }
   const pops = [G.stats.startPop || 40].concat(hist.map(x => x.pop)), morals = [G.stats.startMoral || 70].concat(hist.map(x => x.moral));
@@ -398,8 +428,9 @@ function endHTML() {
 export function render() {
   const app = document.getElementById('app');
   let h = '';
-  if (UI.screen === 'menu' || (!G && UI.screen !== 'setup')) h = menuHTML();
+  if (UI.screen === 'menu' || (!G && UI.screen !== 'setup' && UI.screen !== 'aspecto')) h = menuHTML();
   else if (UI.screen === 'setup') h = setupHTML();
+  else if (UI.screen === 'aspecto') h = aspectoHTML();
   else if (G.phase === 'end') h = endHTML();
   else h = partidaHTML();
   const fija = UI.screen === 'game' && !!G && G.phase !== 'end';

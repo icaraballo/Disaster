@@ -317,7 +317,22 @@
     "moral": "La moral se ha hundido: los vecinos abandonan el pueblo.",
     "nadie": "No queda nadie que pueda trabajar en el pueblo.",
     "desbloqueoPueblo": "Pueblo: {nombre}",
-    "desbloqueoAlcalde": "Alcalde: {titulo} ({nombre})"
+    "desbloqueoAlcalde": "Alcalde: {titulo} ({nombre})",
+    "desbloqueoTema": "Tema: {nombre}"
+  },
+
+  "temas": {
+    "papel": {"nombre": "Papel", "desc": "El de siempre, más cuidado: papel cálido, títulos con serifa y botones con relieve.", "desbloqueo": ""},
+    "diorama": {"nombre": "Diorama", "desc": "Cielo pastel y colores suaves, como una maqueta.", "desbloqueo": ""},
+    "mesa": {"nombre": "Juego de mesa", "desc": "Madera, botones gordos que se hunden y colores vivos.", "desbloqueo": ""},
+    "noche": {"nombre": "Noche", "desc": "Oscuro con ámbar: para jugar de noche o con el móvil en modo oscuro.", "desbloqueo": ""},
+    "protocolo": {"nombre": "Protocolo", "desc": "Protección civil: letra técnica, naranja de emergencia y rejilla en el mapa.", "desbloqueo": "gana una temporada con la ingeniera (Begoña)"},
+    "cuaderno": {"nombre": "Cuaderno de campo", "desc": "Papel rayado, tinta azul y letra a mano.", "desbloqueo": "gana una temporada con el agricultor (Patxi)"},
+    "carta": {"nombre": "Cartografía antigua", "desc": "Pergamino sepia, letra de imprenta antigua y tinta roja.", "desbloqueo": "gana una temporada con la meteoróloga (Garazi)"},
+    "caserio": {"nombre": "Caserío", "desc": "Verde de prado, rojo almagre y madera oscura.", "desbloqueo": "gana una temporada con el tesorero (Txomin)"},
+    "boletin": {"nombre": "Boletín de emergencia", "desc": "Como un periódico: blanco y negro, y en rojo sólo lo importante.", "desbloqueo": "gana una temporada con la enfermera (Arantxa)"},
+    "comic": {"nombre": "Cómic", "desc": "Contornos gruesos, sombras duras y fondo de puntos.", "desbloqueo": "gana una temporada en Errekalde"},
+    "nordico": {"nombre": "Invierno nórdico", "desc": "Minimalista: blanco frío, letra fina y mucho aire.", "desbloqueo": "gana un reto diario con medalla de oro"}
   },
 
   "ui": {
@@ -510,6 +525,13 @@
       "eligeMejora": "Elige una mejora"
     },
     "evento": {"mientras": "Mientras tanto, en el pueblo…"},
+    "temas": {
+      "boton": "Aspecto", "botonSub": "Tema: {tema} · {n} de {total} temas", "titulo": "Aspecto",
+      "intro": "El tema sólo cambia cómo se ve el juego: las reglas y los números son los mismos. Los que faltan se consiguen jugando.",
+      "principales": "Temas", "desbloqueables": "Para desbloquear", "oscuro": "oscuro",
+      "nocheAuto": "Usar «Noche» cuando el móvil esté en modo oscuro", "listo": "Listo"
+    },
+    "panel": {"plegado": "plegado", "normal": "normal", "grande": "grande", "aria": "Panel {altura}. Tocar para dejarlo {siguiente}."},
     "medallas": {
       "bronce": "Bronce", "plata": "Plata", "oro": "Oro",
       "broncePor": "Has aguantado los 8 desastres.",

@@ -60,7 +60,8 @@ export function iniciar() {
 
   const modelos = crearModelos(THREE);
   const grupoCasillas = new THREE.Group(), grupoMunecos = new THREE.Group(), grupoEtiquetas = new THREE.Group(), grupoMarcas = new THREE.Group(), grupoFx = new THREE.Group();
-  escena.add(modelos.peana(ancho, alto), grupoCasillas, grupoMunecos, grupoEtiquetas, grupoMarcas, grupoFx);
+  const peana = modelos.peana(ancho, alto);
+  escena.add(peana, grupoCasillas, grupoMunecos, grupoEtiquetas, grupoMarcas, grupoFx);
   const efectos = crearEfectos(THREE, escena);
 
   const ray = new THREE.Raycaster(), p2 = new THREE.Vector2();
@@ -80,7 +81,7 @@ export function iniciar() {
   camCtl.alPedir(() => pedir());
 
   M = {
-    renderer, canvas, host, botonReset, calor, escena, camara, sol, amb, modelos, grupoCasillas, grupoMunecos, grupoEtiquetas, grupoMarcas, grupoFx, efectos, camCtl,
+    renderer, canvas, host, peana, ancho, alto, botonReset, calor, escena, camara, sol, amb, modelos, grupoCasillas, grupoMunecos, grupoEtiquetas, grupoMarcas, grupoFx, efectos, camCtl,
     tiles: [], fx: [], munecos: new Map(), marcas: [], etiquetas: [], anims: [], rocas: [], destinos: new Map(),
     amb_actual: { fondo: new THREE.Color(AMBIENTE.prep.fondo), nc: new THREE.Color(AMBIENTE.prep.niebla[0]), nn: AMBIENTE.prep.niebla[1], nf: AMBIENTE.prep.niebla[2], sc: new THREE.Color(AMBIENTE.prep.sol[0]), si: AMBIENTE.prep.sol[1], ac: new THREE.Color(AMBIENTE.prep.amb[0]), ai: AMBIENTE.prep.amb[1], sp: new THREE.Vector3(...AMBIENTE.prep.solPos) },
     objetivo: AMBIENTE.prep, tipoImpacto: null, modo: null, montado: false, sucio: true, ultimoT: 0, tiempo: 0, ultimoG: null, claveCasillas: [], impactoRef: null, procesados: 0,
@@ -136,6 +137,14 @@ function estadoCasilla(i, modo, ov) {
     return { t: tt, dmg: tt === b.t && !!(b.dmg || o.has('dmg')), dique: x.dique, cheap: x.cheap, muro: x.muro, sacos: false, rayo: x.rayo, evac: false, contra: !!(b.contra && (x.contra || !o.has('ok'))), reforzada: !!x.reforzada, fam: (b.fam || 0) + (o.has('acogida') ? 1 : 0) };
   }
   return { t: x.t, dmg: x.dmg, dique: x.dique, cheap: x.cheap, muro: x.muro, sacos: x.sacos, rayo: x.rayo, evac: x.evac, contra: !!x.contra, reforzada: !!x.reforzada, fam: familias(x), evacN: x.t === 'H' ? plazasUsadas() : 0 };
+}
+
+// T-15: al cambiar de tema, rehace la peana y todas las casillas con los colores nuevos
+// (js/ui/temas.js ya los ha puesto en data/escena3d.js). La luz va sola hacia el ambiente nuevo.
+export function refrescarTema() {
+  if (!M) return;
+  M.escena.remove(M.peana); M.peana = M.modelos.peana(M.ancho, M.alto); M.escena.add(M.peana);
+  M.ultimoG = null; pedir();
 }
 
 function reiniciarJuego() {

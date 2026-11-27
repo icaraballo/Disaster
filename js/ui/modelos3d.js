@@ -1,7 +1,7 @@
 // Los modelos low-poly del mapa 3D, generados por código: una casilla por tipo y estado, las obras que se
 // construyen, los muñequitos y las etiquetas del mapa de riesgo. Sólo dibuja: no sabe nada de las reglas.
 // Los adornos (árboles, rocas, hierba) usan el azar cosmético con semilla fija por casilla.
-import { ALTURA, COLOR_SUELO, COLOR_AGUA, COLOR_TIERRA, MUNECO } from '../../data/escena3d.js';
+import { ALTURA, COLOR_SUELO, COLOR_AGUA, PALETA, MUNECO } from '../../data/escena3d.js';
 import { conSemilla } from './cosmetico.js';
 
 export function crearModelos(THREE) {
@@ -59,7 +59,7 @@ export function crearModelos(THREE) {
       const n = 3 + Math.floor(r() * 3);
       for (let k = 0; k < n; k++) {
         const x = (r() - 0.5) * 0.7, z = (r() - 0.5) * 0.7, s = 0.75 + r() * 0.55;
-        const hoja = matUnico([0x2F5A33, 0x36673A, 0x3E7440][Math.floor(r() * 3)]);
+        const hoja = matUnico(PALETA.hojas[Math.floor(r() * 3)]);
         T.tintes.push({ m: hoja, base: hoja.color.clone(), peso: 1, arbol: true });
         add(malla(cil(0.03, 0.04, 0.16 * s, 5), mat(0x5A4027), x, h + 0.08 * s, z));
         add(malla(cono(0.2 * s, 0.34 * s, 6), hoja, x, h + 0.28 * s, z));
@@ -75,7 +75,7 @@ export function crearModelos(THREE) {
       add(malla(caja(0.97, 0.05, 0.97), mat(0x8C7350), 0, h * 0.55, 0, { sx: 1.0, sombra: false }));
     } else if (t === 'P') {
       for (let k = 0; k < 6; k++) {
-        const hierba = matUnico(0x7FA05E); T.tintes.push({ m: hierba, base: hierba.color.clone(), peso: 1 });
+        const hierba = matUnico(PALETA.hierba); T.tintes.push({ m: hierba, base: hierba.color.clone(), peso: 1 });
         add(malla(cono(0.035, 0.12, 4), hierba, (r() - 0.5) * 0.8, h + 0.06, (r() - 0.5) * 0.8, { sombra: false }));
       }
       if (r() > 0.6) add(malla(esfera(0.025, 6, 4), mat([0xE8B730, 0xF0F0E8, 0xD66A8A][Math.floor(r() * 3)]), (r() - 0.5) * 0.6, h + 0.05, (r() - 0.5) * 0.6, { sombra: false }));
@@ -83,7 +83,7 @@ export function crearModelos(THREE) {
       add(malla(roca(0.3), mat(0xFFFFFF), 0, h + 0.14, 0, { sx: 1.1, sy: 0.9, sz: 1 }));
       add(malla(roca(0.1), mat(0x9AA8B5), 0.25, h + 0.05, -0.2));
     } else if (t === 'C') {
-      const pared = dano ? matUnico(0x9B8466) : matUnico(0xF1E6CE), tejado = matUnico(dano ? 0x6E3B27 : [0xB5502E, 0xA8442B, 0xC25A33][Math.floor(r() * 3)]);
+      const pared = dano ? matUnico(0x9B8466) : matUnico(PALETA.pared), tejado = matUnico(dano ? 0x6E3B27 : PALETA.tejados[Math.floor(r() * 3)]);
       T.tintes.push({ m: tejado, base: tejado.color.clone(), peso: 0.15 });
       const rot = (Math.floor(r() * 4)) * Math.PI / 2;
       const casa = new THREE.Group(); casa.rotation.y = rot; add(casa);
@@ -119,7 +119,7 @@ export function crearModelos(THREE) {
       add(malla(caja(0.97, 0.05, 0.22), mat(0xC9B58E), 0, h + 0.3, 0, { sombra: false }));
       for (let k = 0; k < 4; k++) add(malla(roca(0.05 + r() * 0.03), mat(0x6E5E48), (r() - 0.5) * 0.8, h + 0.06, 0.3 + (r() - 0.5) * 0.1));
     } else if (t === 'H') {   // refugio: una nave baja con tejado a dos aguas y una cruz roja
-      const pared = dano ? matUnico(0x9B8466) : matUnico(0xF1E6CE);
+      const pared = dano ? matUnico(0x9B8466) : matUnico(PALETA.pared);
       add(malla(caja(0.74, 0.28, 0.46), pared, 0, h + 0.14, 0));
       const tej = malla(cil(0.27, 0.27, 0.78, 3), matUnico(dano ? 0x5B5246 : 0x8E8A84), 0, h + 0.36, 0, { rz: Math.PI / 2 }); tej.scale.set(0.5, 1, 1); if (dano) tej.rotation.x = 0.25;
       add(tej);
@@ -127,7 +127,7 @@ export function crearModelos(THREE) {
       add(malla(caja(0.16, 0.05, 0.02), mat(0xC2391F, { emissive: 0x5A1408 }), 0, h + 0.15, 0.235, { sombra: false }));
       if (e.evacN) for (let k = 0; k < Math.min(3, e.evacN); k++) add(malla(cono(0.07, 0.12, 4), mat(0x2F6B9A), -0.3 + k * 0.12, h + 0.06, 0.34, { sombra: false }));
     } else if (t === 'A') {
-      const pared = dano ? matUnico(0x9B8466) : matUnico(0xF1E6CE), tejado = matUnico(dano ? 0x4A3560 : 0x7A5A9E);
+      const pared = dano ? matUnico(0x9B8466) : matUnico(PALETA.pared), tejado = matUnico(dano ? 0x4A3560 : 0x7A5A9E);
       add(malla(caja(0.72, 0.34, 0.5), pared, 0, h + 0.17, 0.05));
       const tej = malla(cono(0.55, 0.28, 4), tejado, 0, h + 0.48, 0.05, { ry: Math.PI / 4, sx: 1, sy: 1, sz: 0.7 }); if (dano) { tej.rotation.z = 0.25; tej.position.y -= 0.05; }
       add(tej);
@@ -145,7 +145,7 @@ export function crearModelos(THREE) {
       add(prisma);
       add(malla(caja(0.11, 0.16, 0.02), mat(0xF1E6CE), -0.18, h + 0.08, 0.1, { sombra: false }));
       for (let k = 0; k < 4; k++) {
-        const cultivo = matUnico(0x6FA14A); T.tintes.push({ m: cultivo, base: cultivo.color.clone(), peso: 1, cultivo: true });
+        const cultivo = matUnico(PALETA.cultivo); T.tintes.push({ m: cultivo, base: cultivo.color.clone(), peso: 1, cultivo: true });
         add(malla(caja(0.62, 0.05, 0.07), cultivo, 0.0, h + 0.03, 0.2 + k * 0.1 - 0.0, { sombra: false })).position.z = 0.17 + k * 0.1;
       }
       if (e.reforzada) {   // granja reforzada: un silo metálico junto al granero y valla de protección
@@ -154,7 +154,7 @@ export function crearModelos(THREE) {
         add(malla(caja(0.7, 0.06, 0.03), mat(0x6B5B45), 0, h + 0.06, 0.44, { sombra: false }));
       }
     } else if (t === 'O') {
-      add(malla(caja(0.5, 0.26, 0.5), dano ? matUnico(0x9B8466) : matUnico(0xF1E6CE), 0, h + 0.13, 0));
+      add(malla(caja(0.5, 0.26, 0.5), dano ? matUnico(0x9B8466) : matUnico(PALETA.pared), 0, h + 0.13, 0));
       const cupula = malla(esfera(0.26, 10, 5), matUnico(dano ? 0x55606C : 0x7C8FA6), 0, h + 0.26, 0, { sy: 0.9 }); cupula.geometry = geo('semiesfera', () => new THREE.SphereGeometry(0.26, 10, 5, 0, Math.PI * 2, 0, Math.PI / 2)); if (dano) cupula.rotation.z = 0.2;
       add(cupula);
       add(malla(cil(0.025, 0.025, 0.3, 5), mat(0x3B4A5C), 0.12, h + 0.46, 0, { rz: -0.8 }));
@@ -196,8 +196,8 @@ export function crearModelos(THREE) {
   // ---------- el pueblo (peana) ----------
   function peana(cols, filas) {
     const g = new THREE.Group();
-    g.add(malla(caja(cols + 0.5, 0.34, filas + 0.5), mat(COLOR_TIERRA), 0, -0.17, 0, { sombra: false }));
-    g.add(malla(caja(cols + 0.62, 0.05, filas + 0.62), mat(0x4A3A27), 0, -0.36, 0, { sombra: false }));
+    g.add(malla(caja(cols + 0.5, 0.34, filas + 0.5), mat(PALETA.tierra), 0, -0.17, 0, { sombra: false }));
+    g.add(malla(caja(cols + 0.62, 0.05, filas + 0.62), mat(PALETA.bordePeana), 0, -0.36, 0, { sombra: false }));
     return g;
   }
 

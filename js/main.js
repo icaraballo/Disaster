@@ -13,6 +13,7 @@ import { animarNumeros } from './ui/numeros.js';
 import { changeJob, endTurn } from './turnos.js';
 import { toResult, choosePerk, chooseEvent, finish } from './temporada.js';
 import { render, UI } from './ui/vista.js';
+import { AJUSTES, ALTURAS_PANEL, cargarAjustes, guardarAjustes, aplicarTema } from './ui/temas.js';
 
 let timer = null;
 let mapa3d = null;   // el módulo del mapa en 3D, si el navegador lo permite (si no, queda el mapa plano)
@@ -29,7 +30,8 @@ function vigilarImpacto() {
     render(); if (mapa3d) mapa3d.alDibujar();
   }, ms);
 }
-function dibujar() { render(); if (mapa3d) mapa3d.alDibujar(); animarNumeros(); vigilarImpacto(); }
+// Antes de pintar, el tema (T-15): si ha cambiado, el 3D rehace sus casillas con los colores nuevos.
+function dibujar() { if (aplicarTema() && mapa3d) mapa3d.refrescarTema(); render(); if (mapa3d) mapa3d.alDibujar(); animarNumeros(); vigilarImpacto(); }
 
 // Carga el 3D sin bloquear el menú. Con ?mapa=plano, o sin WebGL, se queda el mapa plano de siempre.
 async function activar3d() {
@@ -65,6 +67,7 @@ function irA(g) {
   if (g === 'continue') { if (continuarPartida()) { UI.screen = 'game'; top(); } return dibujar(); }
   if (g === 'setup') { UI.screen = 'setup'; if (!unlockedTown(UI.town)) UI.town = 'villarrio'; top(); return dibujar(); }
   if (g === 'menu') { guardarPartida(); UI.screen = 'menu'; setG(null); clearInterval(timer); timer = null; top(); return dibujar(); }
+  if (g === 'aspecto') { UI.screen = 'aspecto'; top(); return dibujar(); }
   if (g === 'howto') { UI.howto = !UI.howto; return dibujar(); }
   if (g === 'start') { limpiarFalloGuardado(); newGame({town: UI.town, alc: UI.alc}); UI.screen = 'game'; guardarPartida(); top(); return dibujar(); }
   if (g === 'daily') { limpiarFalloGuardado(); newGame({daily: todayKey()}); UI.screen = 'game'; guardarPartida(); top(); return dibujar(); }
@@ -86,7 +89,9 @@ function clic(e) {
   if (d.heat) { G.heat = !G.heat; return dibujar(); }
   if (d.job) { changeJob(d.job, +d.d); guardarPartida(); return dibujar(); }
   if (d.act) { G.sel = G.sel === d.act ? null : d.act; G.msg = ''; G.insp = null; return dibujar(); }
-  if (d.tab) { UI.tab = d.tab; UI.persona = null; G.insp = null; return dibujar(); }
+  if (d.tema) { AJUSTES.tema = d.tema; guardarAjustes(); return dibujar(); }
+  if (d.panel) { AJUSTES.panel = ALTURAS_PANEL[(ALTURAS_PANEL.indexOf(AJUSTES.panel) + 1) % ALTURAS_PANEL.length]; guardarAjustes(); return dibujar(); }
+  if (d.tab) { if (AJUSTES.panel === 'plegado') { AJUSTES.panel = 'normal'; guardarAjustes(); } UI.tab = d.tab; UI.persona = null; G.insp = null; return dibujar(); }
   if (d.cancel) { G.sel = null; G.msg = ''; return dibujar(); }
   if (d.person) { if (UI.persona === d.person) { UI.persona = null; G.insp = null; } else { UI.persona = d.person; G.insp = W(d.person).home; } return dibujar(); }
   if (d.tile) return tocarCasilla(+d.tile);
@@ -101,10 +106,15 @@ async function arrancar() {
   try { await cargarTextosWeb(); }
   catch (e) { app.textContent = 'No se han podido cargar los textos del juego. Recarga la página.'; return; }
   cargarProgreso();
+  cargarAjustes();
+  aplicarTema();
+  // Si el móvil pasa a modo oscuro (o vuelve), la Noche automática entra o sale sin recargar.
+  if (window.matchMedia) { const mq = matchMedia('(prefers-color-scheme: dark)'); if (mq.addEventListener) mq.addEventListener('change', () => dibujar()); }
   verificarGuardadoInicial();
   ganchos.alCambiar = dibujar;
   app.addEventListener('change', (e) => {
     if (e.target.dataset && e.target.dataset.test) { PROG.test = e.target.checked; saveProg(); dibujar(); }
+    if (e.target.dataset && e.target.dataset.nocheauto) { AJUSTES.nocheAuto = e.target.checked; guardarAjustes(); dibujar(); }
   });
   app.addEventListener('click', clic);
   dibujar();
